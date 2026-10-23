@@ -23,7 +23,10 @@
     "backup": "tsx scripts/backup.ts",
     "restore": "tsx scripts/restore.ts",
     "demo:seed": "tsx scripts/seed-demo.ts",
-    "demo:purge": "tsx scripts/purge-demo.ts"
+    "demo:purge": "tsx scripts/purge-demo.ts",
+    "password:hash": "tsx scripts/hash-password.ts",
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "build:netlify": "prisma migrate deploy && tsx prisma/seed.ts && tsx scripts/bootstrap.ts && npm run build"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

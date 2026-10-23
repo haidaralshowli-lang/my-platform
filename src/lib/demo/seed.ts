@@ -49,7 +49,8 @@ function todayKey(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: process.env.APP_TIMEZONE || "Asia/Baghdad" }).format(new Date());
 }
 
-export async function seedDemo(): Promise<DemoResult> {
+/// opts.passwordHash: بصمة Argon2id جاهزة لكلمة مرور مشتركة لكل الحسابات التجريبية (للتهيئة عن بُعد دون تمرير كلمة مرور نصية)
+export async function seedDemo(opts: { passwordHash?: string } = {}): Promise<DemoResult> {
   if (await prisma.violation.count({ where: { isDemo: true } })) {
     throw new Error("البيانات التجريبية موجودة مسبقاً. احذفها أولاً (npm run demo:purge) قبل إعادة إنشائها.");
   }
@@ -61,13 +62,14 @@ export async function seedDemo(): Promise<DemoResult> {
   const credentials: DemoResult["credentials"] = [];
   const users: Record<string, Actor> = {};
   for (const [username, fullName, role] of DEMO_ROLES) {
-    const pw = password();
+    const pw = opts.passwordHash ? "(كلمة المرور المشتركة المحددة عند التهيئة)" : password();
+    const passwordHash = opts.passwordHash ?? (await hashPassword(pw));
     // بعد الحذف يبقى المستخدم التجريبي معطلاً (يشير إليه سجل التدقيق)، فيُعاد تفعيله بكلمة مرور جديدة
     const u = await prisma.user.upsert({
       where: { username },
-      update: { passwordHash: await hashPassword(pw), isActive: true, failedLoginCount: 0, lockedUntil: null },
+      update: { passwordHash, isActive: true, failedLoginCount: 0, lockedUntil: null },
       create: {
-        username, fullName, passwordHash: await hashPassword(pw), mustChangePassword: false, isActive: true, isDemo: true,
+        username, fullName, passwordHash, mustChangePassword: false, isActive: true, isDemo: true,
         scope: "CENTRAL", governorateId: hq.governorateId, officeId: hq.id, roles: { create: [{ roleId: roleId(role) }] },
       },
     });
