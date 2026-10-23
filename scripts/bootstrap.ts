@@ -3,10 +3,10 @@
 //     ولم يوجد المستخدم بعد. يُلزم بتغيير كلمة المرور عند أول دخول.
 //  2) بيانات العرض التجريبية: إذا ضُبط BOOTSTRAP_DEMO=1 و BOOTSTRAP_DEMO_PASSWORD_HASH، ولم تُنشأ من قبل قط
 //     (فلا تعود بعد حذفها بـ demo:purge).
-// بعد نجاح التهيئة تُحذف هذه المتغيرات من إعدادات البيئة.
+// يُشغَّل باتصال مالك الجداول (DIRECT_DATABASE_URL). بعد نجاح التهيئة تُحذف هذه المتغيرات من إعدادات البيئة.
 import { prisma } from "../src/lib/db";
 import { writeAudit } from "../src/lib/audit";
-import { seedDemo } from "../src/lib/demo/seed";
+import { purgeDemo, seedDemo } from "../src/lib/demo/seed";
 
 const ARGON = /^\$argon2id\$v=19\$m=\d+,t=\d+,p=\d+\$[A-Za-z0-9+/]+\$[A-Za-z0-9+/]+$/;
 
@@ -36,6 +36,11 @@ async function bootstrapDemo() {
   const hash = process.env.BOOTSTRAP_DEMO_PASSWORD_HASH;
   if (!hash || !ARGON.test(hash)) throw new Error("BOOTSTRAP_DEMO_PASSWORD_HASH مطلوب (بصمة Argon2id)");
   if (await prisma.auditLog.findFirst({ where: { action: "demo.seeded" } })) return console.log("• البيانات التجريبية أُنشئت سابقاً؛ لا إعادة إنشاء");
+  // إنشاء سابق لم يكتمل (انقطاع أثناء البناء): يُحذف ما أُنشئ منه ثم يُعاد الإنشاء. الحذف يتطلب اتصالاً بصلاحية مالك الجداول.
+  if (await prisma.violation.count({ where: { isDemo: true } })) {
+    const p = await purgeDemo();
+    console.log(`• حُذفت ${p.violations} مخالفة تجريبية من إنشاء سابق غير مكتمل`);
+  }
   const r = await seedDemo({ passwordHash: hash });
   console.log(`✔ أُنشئت ${r.violations} مخالفة تجريبية و${r.credentials.length} حسابات تجريبية`);
 }
