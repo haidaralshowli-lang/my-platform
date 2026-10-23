@@ -21,7 +21,9 @@
     "job:deadlines": "tsx scripts/run-deadlines-job.ts",
     "postinstall": "prisma generate",
     "backup": "tsx scripts/backup.ts",
-    "restore": "tsx scripts/restore.ts"
+    "restore": "tsx scripts/restore.ts",
+    "demo:seed": "tsx scripts/seed-demo.ts",
+    "demo:purge": "tsx scripts/purge-demo.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

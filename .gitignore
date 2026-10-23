@@ -14,3 +14,4 @@ playwright-report/
 next-env.d.ts
 *.tsbuildinfo
 tests/e2e/.state.json
+demo-credentials*.txt

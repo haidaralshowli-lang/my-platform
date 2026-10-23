@@ -115,7 +115,7 @@ function pick(v: Partial<Violation> | ViolationInput) {
   return out;
 }
 
-export async function createDraft(actor: Actor, input: ViolationInput, ctx?: AuditContext): Promise<Violation> {
+export async function createDraft(actor: Actor, input: ViolationInput, ctx?: AuditContext, opts: { isDemo?: boolean } = {}): Promise<Violation> {
   assertCan(actor, "violation.create");
   await validateRefs(actor, input);
   return prisma.$transaction(async (tx) => {
@@ -126,12 +126,13 @@ export async function createDraft(actor: Actor, input: ViolationInput, ctx?: Aud
         createdById: actor.id,
         stage: "DRAFT",
         generalStatus: "OPEN",
+        isDemo: opts.isDemo === true,
       },
     });
     await tx.violationStatusHistory.create({
       data: { violationId: v.id, fromStage: null, toStage: "DRAFT", fromStatus: null, toStatus: "OPEN", action: "create_draft", actorId: actor.id, actorRoles: actor.roles },
     });
-    await writeAudit(tx, { actor, action: "violation.draft_created", entityType: "Violation", entityId: v.id, after: pick(input), ctx });
+    await writeAudit(tx, { actor, action: "violation.draft_created", entityType: "Violation", entityId: v.id, after: { ...pick(input), ...(v.isDemo ? { isDemo: true } : {}) }, ctx });
     return v;
   });
 }
