@@ -105,7 +105,7 @@ test("مسار المصادقات كاملاً: رئيس الهيئة، القس
   const del = await as(browser, info, "delivery");
   await del.goto(url);
   await del.getByLabel(/^اسم صاحب التوقيع/).fill("رئيس الهيئة");
-  await del.getByLabel(/^تاريخ التوقيع/).fill(new Date().toISOString().slice(0, 10));
+  await del.getByLabel(/^تاريخ التوقيع/).fill(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Baghdad" }).format(new Date()));
   await del.getByLabel(/^النسخة الضوئية الموقعة/).setInputFiles("tests/e2e/fixtures/mahdar.pdf");
   await confirm(del, "رفع النسخة الموقعة");
   await expect(del.getByText("رُفعت النسخة الموقعة وانتقلت المعاملة إلى مرحلة التبليغ.")).toBeVisible();

@@ -113,18 +113,14 @@ export function DataTable({ children }: { children: ReactNode }) {
   );
 }
 
+/// شعار الهيئة الرسمي (من موقعها cmc.iq) على قرص أبيض ليبقى واضحاً فوق الخلفية الكحلية، مع اسم المنصة
 export function Brand({ compact = false }: { compact?: boolean }) {
-  const logo = process.env.NEXT_PUBLIC_LOGO_PATH;
   return (
     <div className="flex items-center gap-3">
-      {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} alt="شعار هيئة الإعلام والاتصالات" className="h-10 w-10 object-contain" />
-      ) : (
-        <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-accent bg-white text-xs font-bold text-brand">
-          هـ.إ.ا
-        </span>
-      )}
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white p-0.5 shadow-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/cmc-emblem.png" alt="شعار هيئة الإعلام والاتصالات" width={40} height={40} className="h-10 w-10 object-contain" />
+      </span>
       {!compact && (
         <div className="leading-tight">
           <div className="text-sm font-bold">منصة إدارة المخالفات</div>

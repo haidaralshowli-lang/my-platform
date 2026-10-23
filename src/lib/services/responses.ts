@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isFutureDateKey } from "@/lib/datetime";
 import { Prisma, type ResponseKind, type Violation, type ViolationOutcome } from "@prisma/client";
 import { prisma, type Tx } from "@/lib/db";
 import { AppError, forbidden, notFound } from "@/lib/errors";
@@ -80,7 +81,7 @@ type Specific = { kind: "FINANCIAL"; data: z.infer<typeof financialSchema> } | {
 export async function recordResponse(actor: Actor, violationId: string, base: z.infer<typeof responseBaseSchema>, sp: Specific, files: IncomingFile[], ctx?: AuditContext): Promise<string> {
   assertCan(actor, KIND_PERM[sp.kind]);
   const receivedAt = new Date(`${base.receivedAt}T00:00:00Z`);
-  if (receivedAt.getTime() > Date.now()) throw new AppError("لا يجوز أن يكون تاريخ ورود الاستجابة في المستقبل");
+  if (isFutureDateKey(base.receivedAt)) throw new AppError("لا يجوز أن يكون تاريخ ورود الاستجابة في المستقبل");
   const stored = files.length ? await prepareFiles(files, actor, ctx) : [];
   return prisma.$transaction(async (tx) => {
     const v = await lockViolation(tx, violationId);
@@ -135,7 +136,7 @@ export async function addPayment(actor: Actor, responseId: string, input: z.infe
     if (!r.financial) throw new AppError("ليست استجابة مالية");
     const amount = new Decimal(input.amount);
     if (amount.isZero()) throw new AppError("المبلغ لا يكون صفراً");
-    if (new Date(`${input.paidAt}T00:00:00Z`).getTime() > Date.now()) throw new AppError("لا يجوز أن يكون تاريخ التسديد في المستقبل");
+    if (isFutureDateKey(input.paidAt)) throw new AppError("لا يجوز أن يكون تاريخ التسديد في المستقبل");
     const paid = r.financial.payments.reduce((s, p) => s.plus(p.amount), new Decimal(0));
     const after = paid.plus(amount);
     const due = r.financial.amountDue;

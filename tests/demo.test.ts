@@ -3,15 +3,17 @@ import { prisma } from "@/lib/db";
 import { verifyAuditChain } from "@/lib/audit";
 import { purgeDemo, seedDemo } from "@/lib/demo/seed";
 import { dashboardKpis } from "@/lib/services/dashboard";
-import { makeUser, completeInput } from "./helpers";
+import { makeUser, makeOffice, completeInput } from "./helpers";
 import { createDraft } from "@/lib/services/violations";
 
 describe("البيانات التجريبية", () => {
   it("تُنشأ عبر الخدمات بكل المراحل، لا تدخل لوحة المعلومات، وتُحذف دون مساس بالبيانات الحقيقية أو سجل التدقيق", async () => {
     const reg = (await makeUser(["REGISTRAR"])).actor;
     const real = await createDraft(reg, await completeInput());
-    const senior = (await makeUser(["SENIOR_MGMT"], { scope: "CENTRAL" })).actor;
-    const before = await dashboardKpis(senior);
+    // مدير فرع في مكتب تجريبي: لا يوجد فيه إلا مخالفات تجريبية، فلا تتأثر المقارنة باختبارات أخرى تعمل بالتوازي
+    await makeOffice("DEMO-BSR", "BSR");
+    const manager = (await makeUser(["BRANCH_MANAGER"], { officeCode: "DEMO-BSR" })).actor;
+    const before = await dashboardKpis(manager);
 
     const r = await seedDemo();
     expect(r.credentials).toHaveLength(9);
@@ -22,7 +24,8 @@ describe("البيانات التجريبية", () => {
     for (const s of ["DRAFT", "AWAITING_FINAL_APPROVAL", "NOT_APPROVED", "OBJECTION_UNDER_REVIEW", "AWAITING_RESPONSE_VERIFICATION", "AWAITING_DELIVERY", "DEADLINE_RUNNING", "CRIMINAL_CASE", "CLOSED"]) expect([...stages]).toContain(s);
     expect(await prisma.deadlineCalculation.count({ where: { violation: { isDemo: true }, status: "NEAR_EXPIRY" } })).toBeGreaterThan(0);
     expect(await prisma.user.findUniqueOrThrow({ where: { username: "demo.setup" } })).toMatchObject({ isActive: false });
-    expect(await dashboardKpis(senior)).toEqual(before);
+    expect(await prisma.violation.count({ where: { isDemo: true, officeId: manager.officeId! } })).toBeGreaterThan(0);
+    expect(await dashboardKpis(manager)).toEqual(before);
     await expect(seedDemo()).rejects.toThrow(/موجودة مسبقاً/);
 
     const auditBefore = await prisma.auditLog.count();

@@ -41,7 +41,7 @@ export async function toAwaitingDelivery(c: Cast, overrides: Record<string, unkn
   await decideLegal(c.legal2, d.id, "APPROVED", null, await ver(d.id));
   await decide(c.chair, d.id, "warning_issue", "APPROVED", null, await ver(d.id));
   const warningId = await prepareWarning(c.legal, d.id, { templateId: c.templateId, requiredAction: "إزالة المخالفة", responsePeriodText: "عشرة أيام" });
-  await uploadSignedWarning(c.delivery, warningId, { name: "s.pdf", data: SAMPLE_PDF }, signedSchema.parse({ signerName: "رئيس الهيئة", signedAt: new Date().toISOString().slice(0, 10) }));
+  await uploadSignedWarning(c.delivery, warningId, { name: "s.pdf", data: SAMPLE_PDF }, signedSchema.parse({ signerName: "رئيس الهيئة", signedAt: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Baghdad" }).format(new Date()) }));
   return { id: d.id, warningId };
 }
 

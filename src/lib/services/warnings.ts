@@ -5,7 +5,7 @@ import { writeAudit, type AuditContext } from "@/lib/audit";
 import { assertCan, can, inScope, type Actor } from "@/lib/rbac/actor";
 import { applyTransition, lockViolation } from "@/lib/workflow";
 import { nextOfficialNumber } from "@/lib/numbering";
-import { formatDate } from "@/lib/datetime";
+import { formatDate, isFutureDateKey, localDateKey } from "@/lib/datetime";
 import { insertAttachments, prepareFiles, type IncomingFile } from "./attachments";
 
 // ─── القوالب ───
@@ -170,8 +170,8 @@ export const signedSchema = z.object({
   signedAt: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "تاريخ التوقيع مطلوب")
-    .transform((v) => new Date(`${v}T00:00:00Z`))
-    .refine((d) => d.getTime() <= Date.now(), "لا يجوز أن يكون تاريخ التوقيع في المستقبل"),
+    .refine((v) => !isFutureDateKey(v), "لا يجوز أن يكون تاريخ التوقيع في المستقبل")
+    .transform((v) => new Date(`${v}T00:00:00Z`)),
 });
 
 /// التوقيع اليدوي: لا يعتبر الإنذار موقعاً إلا برفع نسخته الضوئية الموقعة
@@ -181,7 +181,7 @@ export async function uploadSignedWarning(actor: Actor, warningId: string, file:
   const w0 = await prisma.warning.findUnique({ where: { id: warningId }, include: { violation: true } });
   if (!w0 || !inScope(actor, w0.violation)) throw notFound();
   if (w0.status !== "AWAITING_SIGNATURE") throw new AppError("الإنذار ليس بانتظار التوقيع");
-  if (input.signedAt < new Date(w0.preparedAt.toISOString().slice(0, 10) + "T00:00:00Z")) throw new AppError("لا يجوز أن يسبق تاريخ التوقيع تاريخ إعداد الإنذار");
+  if (input.signedAt < new Date(localDateKey(w0.preparedAt) + "T00:00:00Z")) throw new AppError("لا يجوز أن يسبق تاريخ التوقيع تاريخ إعداد الإنذار");
   const stored = await prepareFiles([file], actor, ctx);
   await prisma.$transaction(async (tx) => {
     const [attId] = await insertAttachments(tx, actor, stored, {

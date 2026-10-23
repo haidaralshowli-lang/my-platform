@@ -41,6 +41,12 @@ export function zonedDateTimeToUtc(dateKey: string, time = "00:00", tz = DEFAULT
   return new Date(guess - (asLocal - guess));
 }
 
+/// هل التاريخ (YYYY-MM-DD) بعد تاريخ اليوم في المنطقة المعتمدة؟ الحقول التاريخية تُقارن بالتاريخ المحلي لا بلحظة UTC،
+/// وإلا رُفض تاريخ اليوم بين منتصف الليل المحلي ومنتصف ليل UTC.
+export function isFutureDateKey(key: string, now = new Date(), tz = DEFAULT_TZ): boolean {
+  return key > localDateKey(now, tz);
+}
+
 export type DigitStyle = "latn" | "arab";
 
 /// نمط الأرقام الموحد للعرض: APP_DIGITS=latn (0-9، افتراضي) أو arab (٠-٩)

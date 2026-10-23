@@ -186,7 +186,7 @@ describe("الإنذار", () => {
     expect((await prisma.violation.findUniqueOrThrow({ where: { id } })).stage).toBe("WARNING_PREPARATION");
     const w2 = await prepareWarning(legal, id, { templateId, requiredAction: "إيقاف البث فوراً", responsePeriodText: "عشرة أيام" });
 
-    const signed = signedSchema.parse({ signerName: "رئيس الهيئة", signedAt: new Date().toISOString().slice(0, 10) });
+    const signed = signedSchema.parse({ signerName: "رئيس الهيئة", signedAt: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Baghdad" }).format(new Date()) });
     await expect(uploadSignedWarning(delivery, w2, undefined, signed)).rejects.toThrow(/النسخة الضوئية/);
     await expect(uploadSignedWarning(reg, w2, { name: "s.pdf", data: SAMPLE_PDF }, signed)).rejects.toThrow(/صلاحية/);
     await uploadSignedWarning(delivery, w2, { name: "signed.pdf", data: SAMPLE_PDF }, signed);

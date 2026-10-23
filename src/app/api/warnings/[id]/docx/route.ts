@@ -1,4 +1,5 @@
-import { AlignmentType, Document, Packer, Paragraph, TextRun } from "docx";
+import { AlignmentType, Document, ImageRun, Packer, Paragraph, TextRun } from "docx";
+import { LOGO_LOCKUP } from "@/lib/brand-logo";
 import { getSession, requestContext } from "@/lib/auth/server";
 import { getWarningForActor } from "@/lib/services/warnings";
 import { AppError } from "@/lib/errors";
@@ -27,8 +28,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       sections: [{
         properties: { page: { margin: { top: 1000, bottom: 1000, left: 1100, right: 1100 } } },
         children: [
-          rtl("جمهورية العراق", { bold: true }),
-          rtl("هيئة الإعلام والاتصالات", { bold: true }),
+          // شعار الهيئة الرسمي (يتضمن «جمهورية العراق — هيئة الإعلام والاتصالات»)
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 },
+            children: [new ImageRun({
+              type: "png",
+              data: Buffer.from(LOGO_LOCKUP.pngBase64, "base64"),
+              transformation: { width: 360, height: Math.round((360 * LOGO_LOCKUP.height) / LOGO_LOCKUP.width) },
+              altText: { name: "شعار الهيئة", title: "شعار هيئة الإعلام والاتصالات", description: "جمهورية العراق — هيئة الإعلام والاتصالات" },
+            })],
+          }),
           rtl(`${w.violation.office.nameAr} — ${w.violation.office.governorate.nameAr}`),
           rtl(`العدد: ${w.number}    التاريخ: ${formatDate(w.preparedAt)}    رقم المخالفة: ${w.violation.number ?? ""}`),
           rtl("إنذار", { bold: true, size: 36, align: AlignmentType.CENTER }),

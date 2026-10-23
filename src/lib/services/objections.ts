@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isFutureDateKey } from "@/lib/datetime";
 import type { ViolationStage } from "@prisma/client";
 import { prisma, type Tx } from "@/lib/db";
 import { AppError, notFound } from "@/lib/errors";
@@ -47,7 +48,7 @@ async function unsuspend(tx: Tx, violationId: string, now = new Date()) {
 /// تسجيل اعتراض أو طعن. لا يوقف المدة ولا يلغي المخالفة تلقائياً، إلا إذا نصت القاعدة المعتمدة على التعليق.
 export async function recordObjection(actor: Actor, violationId: string, input: z.infer<typeof objectionSchema>, files: IncomingFile[], ctx?: AuditContext): Promise<string> {
   assertCan(actor, "objection.record");
-  if (new Date(`${input.submittedAt}T00:00:00Z`).getTime() > Date.now()) throw new AppError("لا يجوز أن يكون تاريخ التقديم في المستقبل");
+  if (isFutureDateKey(input.submittedAt)) throw new AppError("لا يجوز أن يكون تاريخ التقديم في المستقبل");
   const stored = files.length ? await prepareFiles(files, actor, ctx) : [];
   return prisma.$transaction(async (tx) => {
     const v = await lockViolation(tx, violationId);

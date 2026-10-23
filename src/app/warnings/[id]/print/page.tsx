@@ -11,7 +11,6 @@ export default async function WarningPrintPage({ params }: { params: Promise<{ i
   const actor = await requireActor();
   const { id } = await params;
   const w = await orNotFound(getWarningForActor(actor, id));
-  const logo = process.env.NEXT_PUBLIC_LOGO_PATH;
   const signed = w.status === "SIGNED" || w.status === "DELIVERED" || w.status === "SENT";
   return (
     <div className="min-h-dvh bg-page py-6 print:bg-white print:py-0">
@@ -22,16 +21,11 @@ export default async function WarningPrintPage({ params }: { params: Promise<{ i
       <article className="mx-auto min-h-[297mm] max-w-[210mm] bg-white px-[18mm] py-[16mm] text-[15px] leading-8 shadow print:min-h-0 print:shadow-none">
         <header className="flex items-start justify-between gap-4 border-b-4 border-brand pb-4">
           <div className="leading-7">
-            <div className="text-lg font-bold text-brand">جمهورية العراق</div>
-            <div className="text-lg font-bold text-brand">هيئة الإعلام والاتصالات</div>
-            <div className="text-sm">{w.violation.office.nameAr} — {w.violation.office.governorate.nameAr}</div>
+            {/* شعار الهيئة الرسمي بنصّيه: جمهورية العراق — هيئة الإعلام والاتصالات */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/cmc-logo-full.png" alt="جمهورية العراق — هيئة الإعلام والاتصالات" width={990} height={290} className="h-20 w-auto" />
+            <div className="mt-1 text-sm">{w.violation.office.nameAr} — {w.violation.office.governorate.nameAr}</div>
           </div>
-          {logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logo} alt="شعار الهيئة" className="h-20 w-20 object-contain" />
-          ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-accent text-xs text-muted">الشعار</div>
-          )}
           <div className="text-sm leading-7">
             <div>العدد: <bdi className="font-semibold">{w.number}</bdi></div>
             <div>التاريخ: {formatDate(w.preparedAt)}</div>

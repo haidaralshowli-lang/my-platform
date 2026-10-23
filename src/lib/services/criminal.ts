@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isFutureDateKey } from "@/lib/datetime";
 import { prisma, type Tx } from "@/lib/db";
 import { AppError, forbidden, notFound } from "@/lib/errors";
 import { writeAudit, type AuditContext } from "@/lib/audit";
@@ -14,7 +15,7 @@ const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "التاريخ مطلو
 const optDate = z.string().optional().transform((v) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T00:00:00Z`) : null));
 const optText = (max = 5000) => z.string().trim().max(max).optional().transform((v) => v || null);
 const notFuture = (d: Date | null, label: string) => {
-  if (d && d.getTime() > Date.now()) throw new AppError(`لا يجوز أن يكون ${label} في المستقبل`);
+  if (d && isFutureDateKey(d.toISOString().slice(0, 10))) throw new AppError(`لا يجوز أن يكون ${label} في المستقبل`);
 };
 
 // ─── عدم الاستجابة ───

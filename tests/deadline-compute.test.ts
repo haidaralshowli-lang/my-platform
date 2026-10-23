@@ -67,3 +67,13 @@ describe("احتساب المدة القانونية", () => {
     expect(daysRemaining(due, new Date("2026-11-07T09:00:00Z"), "Asia/Baghdad")).toBe(3);
   });
 });
+
+describe("مقارنة التواريخ بالتقويم المحلي", () => {
+  it("تاريخ اليوم في بغداد ليس «مستقبلاً» بين منتصف الليل المحلي ومنتصف ليل UTC", async () => {
+    const { isFutureDateKey } = await import("@/lib/datetime");
+    const now = new Date("2026-10-23T21:30:00Z"); // 00:30 يوم 24 في بغداد
+    expect(isFutureDateKey("2026-10-24", now, "Asia/Baghdad")).toBe(false);
+    expect(isFutureDateKey("2026-10-23", now, "Asia/Baghdad")).toBe(false);
+    expect(isFutureDateKey("2026-10-25", now, "Asia/Baghdad")).toBe(true);
+  });
+});
