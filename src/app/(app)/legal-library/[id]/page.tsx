@@ -32,7 +32,7 @@ export default async function LegalDocPage({ params }: { params: Promise<{ id: s
         {d.keywords.map((k) => <Badge key={k}>{k}</Badge>)}
       </div>
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
           {d.versions.map((v) => (
             <Card key={v.id} title={`الإصدار ${v.versionNo}${v === current ? " (الحالي)" : ""}`}>
               <p className="mb-2 text-xs text-muted">{formatDateTime(v.createdAt)}{v.notes ? ` — ${v.notes}` : ""}</p>

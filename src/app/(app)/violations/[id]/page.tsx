@@ -105,7 +105,7 @@ export default async function ViolationPage({ params, searchParams }: { params: 
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
           <Card title="البيانات الأساسية">
             <dl className="grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
               <Item label="رقم المخالفة">{v.number ? <bdi className="font-semibold">{v.number}</bdi> : `غير مسجلة (${v.draftRef})`}</Item>

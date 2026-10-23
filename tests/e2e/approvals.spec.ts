@@ -113,3 +113,21 @@ test("مسار المصادقات كاملاً: رئيس الهيئة، القس
   await expect(del.getByText("سجل القرارات والمصادقات")).toBeVisible();
   await del.screenshot({ path: `test-results/approvals-${info.project.name}.png`, fullPage: true });
 });
+
+test("لا تمرير أفقي في صفحات المنصة الرئيسية", async ({ browser }, info) => {
+  const page = await as(browser, info, "chairman");
+  for (const path of ["/dashboard", "/violations", "/queues/approval", "/warnings", "/legal-library"]) {
+    await page.goto(path);
+    const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    expect(sw, path).toBeLessThanOrEqual(cw);
+  }
+  // صفحة مخالفة فيها سجل قرارات (جدول عريض)
+  await page.goto("/violations?stage=AWAITING_DELIVERY");
+  const link = page.locator("tbody a").first();
+  if (await link.count()) {
+    await link.click();
+    await page.waitForURL(/\/violations\/c/);
+    const { sw, cw } = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    expect(sw).toBeLessThanOrEqual(cw);
+  }
+});

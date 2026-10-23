@@ -7,6 +7,7 @@ import { Badge, Card, DataTable } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import { LEGAL_DOC_STATUS_LABELS, LEGAL_REF_PURPOSE_LABELS } from "@/lib/documents";
 import { violationLegalRefs, PURPOSE_PERMISSION } from "@/lib/services/legal-library";
+import { SYSTEM_ROLES } from "@/lib/rbac/catalog";
 import { AssessmentForm, DecisionForm, LinkArticleForm, PrepareWarningForm, SignedWarningForm, UnlinkRefForm } from "./workflow-forms";
 
 const APPROVAL_KIND_LABELS: Record<string, string> = {
@@ -237,7 +238,7 @@ export async function WorkflowSections({ actor, v }: { actor: Actor; v: Violatio
                   <td><Badge tone={DECISION_TONE[a.decision]}>{DECISION_LABELS[a.decision]}</Badge></td>
                   <td className="text-xs">{APPROVAL_KIND_LABELS[a.kind]}</td>
                   <td className="text-xs">{a.decidedBy.fullName}</td>
-                  <td className="text-xs">{a.decidedRole.join("، ")}</td>
+                  <td className="text-xs">{a.decidedRole.map((r) => SYSTEM_ROLES[r]?.nameAr ?? r).join("، ")}</td>
                   <td className="text-xs whitespace-nowrap">{formatDateTime(a.decidedAt)}</td>
                   <td className="text-xs">{a.notes ?? "—"}</td>
                 </tr>
