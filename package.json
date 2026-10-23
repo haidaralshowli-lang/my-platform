@@ -18,6 +18,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "job:deadlines": "tsx scripts/run-deadlines-job.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

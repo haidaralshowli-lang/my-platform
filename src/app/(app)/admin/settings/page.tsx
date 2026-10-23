@@ -1,18 +1,20 @@
 import { requirePagePermission } from "@/lib/auth/server";
-import { Card, PageHeader } from "@/components/ui";
+import { Card, LinkButton, PageHeader } from "@/components/ui";
+import { can } from "@/lib/rbac/actor";
 import { loadReferenceLists, REFERENCE_LISTS } from "@/lib/services/reference";
 import { ReferenceListEditor } from "./reference-ui";
 
 export const metadata = { title: "إعدادات النظام" };
 
 export default async function SettingsPage() {
-  await requirePagePermission("reference.manage");
+  const actor = await requirePagePermission("reference.manage");
   const d = await loadReferenceLists();
   const simple = (k: "detectionSource" | "entityType" | "activityType" | "judgmentResultType") => d[k].map((i) => ({ id: i.id, nameAr: i.nameAr, isActive: i.isActive }));
   return (
     <>
       <PageHeader
         title="إعدادات النظام"
+        actions={can(actor, "deadline.rules_manage") ? <LinkButton variant="secondary" href="/deadlines/rules">قواعد المدد القانونية والعطل</LinkButton> : undefined}
         description="القوائم المرجعية المستخدمة في النماذج. لا تُحذف العناصر لارتباط المعاملات بها؛ تُعطَّل فتختفي من النماذج الجديدة وتبقى ظاهرة في المعاملات السابقة. جميع التعديلات مسجلة في سجل التدقيق."
       />
       <div className="flex flex-col gap-6">

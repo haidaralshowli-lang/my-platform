@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { LogOut, KeyRound } from "lucide-react";
+import { Bell, LogOut, KeyRound } from "lucide-react";
+import { unreadCount } from "@/lib/services/notifications";
 import { requireActor } from "@/lib/auth/server";
 import { visibleNav } from "@/lib/nav";
 import { SYSTEM_ROLES } from "@/lib/rbac/catalog";
@@ -12,6 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const actor = await requireActor();
   const items = visibleNav(actor).map(({ href, label, icon }) => ({ href, label, icon }));
   const roleNames = actor.roles.map((r) => SYSTEM_ROLES[r]?.nameAr ?? r).join("، ");
+  const unread = await unreadCount(actor.id);
   return (
     <div className="flex min-h-dvh">
       <Sidebar items={items} />
@@ -22,6 +24,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="text-sm font-medium">{actor.fullName}</div>
             <div className="text-xs text-muted">{roleNames || "بلا دور"}</div>
           </div>
+          <Link href="/notifications" className="relative rounded-md p-2 text-muted hover:bg-band hover:text-brand" title="التنبيهات" aria-label={`التنبيهات (${unread} غير مقروءة)`}>
+            <Bell className="h-4 w-4" />
+            {unread > 0 && <span className="absolute -top-0.5 -end-0.5 min-w-4 rounded-full bg-tone-danger px-1 text-center text-[10px] leading-4 text-white">{unread > 99 ? "99+" : unread}</span>}
+          </Link>
           <Link href="/change-password" className="rounded-md p-2 text-muted hover:bg-band hover:text-brand" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور">
             <KeyRound className="h-4 w-4" />
           </Link>

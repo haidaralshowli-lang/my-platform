@@ -27,6 +27,8 @@ export const ATTACHMENT_STATUS_LABELS = {
 export const SYSTEM_DOC_TYPES = {
   SIGNED_WARNING: "الإنذار الموقع (نسخة ضوئية)",
   LEGAL_DOCUMENT: "ملف وثيقة مرجعية",
+  RECEIPT: "وصل الاستلام (نسخة ضوئية)",
+  EXTENSION_REQUEST: "مستند طلب التمديد",
 } as const;
 
 export function docTypeLabel(code: string): string {

@@ -11,7 +11,9 @@
 3. `docker compose up -d --build`. تُطبَّق الترحيلات تلقائياً عند بدء الحاوية.
 4. `docker compose exec app npx tsx prisma/seed.ts`
 5. `docker compose exec -it app npx tsx scripts/create-admin.ts`
-6. **الوصول الخارجي الآمن:** التطبيق مربوط على `127.0.0.1:3000` فقط. ضع أمامه وكيلاً عكسياً (nginx أو Caddy) بشهادة TLS:
+6. **المهمة المجدولة على الخادم:** أضف إلى crontab المضيف:
+   `5 * * * * docker compose -f /opt/cmc/docker-compose.yml exec -T app npx tsx scripts/run-deadlines-job.ts >> /var/log/cmc-deadlines.log 2>&1`
+7. **الوصول الخارجي الآمن:** التطبيق مربوط على `127.0.0.1:3000` فقط. ضع أمامه وكيلاً عكسياً (nginx أو Caddy) بشهادة TLS:
 
 ```nginx
 server {
@@ -46,7 +48,7 @@ DATABASE_URL="<direct-url>" npm run db:seed
 DATABASE_URL="<direct-url>" npm run admin:create
 ```
 
-5. **المهام المجدولة:** دالة Netlify مجدولة لتحديث المدد والتنبيهات (تُضاف في الجزء 4).
+5. **المهام المجدولة:** الدالة `netlify/functions/deadlines-cron.mts` تعمل كل ساعة، وتستدعي `POST /api/cron/deadlines` بالرمز `CRON_SECRET`. يجب ضبط `CRON_SECRET` في متغيرات بيئة Netlify (32 حرفاً عشوائياً على الأقل).
 
 > سيُنفَّذ النشر الفعلي على Netlify وSupabase ويُتحقق منه في الجزء 8. هذا القسم سيُحدَّث برابط النشر الفعلي وبنتائج التحقق.
 

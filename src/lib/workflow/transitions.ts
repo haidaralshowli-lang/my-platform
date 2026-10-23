@@ -157,3 +157,13 @@ defineTransition("warning_signed", {
     return w ? null : "لا تعتبر النسخة غير الموقعة إنذاراً موقعاً: يجب رفع النسخة الموقعة يدوياً";
   },
 });
+
+// ─── المرحلة السابعة والثامنة: التبليغ والمدد (تُطلق من خدماتها بعد التحقق من الصلاحية) ───
+
+defineTransition("warning_sent", { labelAr: "إرسال الإنذار للتبليغ", from: ["AWAITING_DELIVERY"], to: "AWAITING_RECEIPT_PROOF", permission: "delivery.record" });
+defineTransition("receipt_recorded", { labelAr: "تسجيل استلام الإنذار", from: ["AWAITING_RECEIPT_PROOF"], to: "DEADLINE_RUNNING", permission: null });
+defineTransition("deadline_expired", { labelAr: "انتهاء المدة دون استجابة", from: ["DEADLINE_RUNNING"], to: "DEADLINE_EXPIRED", permission: null });
+defineTransition("deadline_reopened", { labelAr: "عودة سريان المدة بعد تصحيح أو تمديد", from: ["DEADLINE_EXPIRED"], to: "DEADLINE_RUNNING", permission: null });
+defineTransition("extension_requested", { labelAr: "تسجيل طلب تمديد", from: ["DEADLINE_RUNNING", "DEADLINE_EXPIRED"], to: "EXTENSION_UNDER_REVIEW", permission: null });
+defineTransition("extension_decided_running", { labelAr: "قرار طلب التمديد (المدة سارية)", from: ["EXTENSION_UNDER_REVIEW"], to: "DEADLINE_RUNNING", permission: null });
+defineTransition("extension_decided_expired", { labelAr: "قرار طلب التمديد (المدة منتهية)", from: ["EXTENSION_UNDER_REVIEW"], to: "DEADLINE_EXPIRED", permission: null });

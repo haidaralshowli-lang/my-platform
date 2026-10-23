@@ -11,6 +11,8 @@ export const DEFAULT_SETTINGS = {
   "attachments.maxSizeMb": 25,
   "attachments.maxFilesPerViolation": 200,
   "notifications.nearExpiryDays": 3,
+  /// أيام نهاية الأسبوع لاحتساب أيام العمل: 0 = الأحد … 6 = السبت (العراق: الجمعة والسبت)
+  "deadline.weekendDays": [5, 6] as number[],
   "auth.maxFailedLogins": 5,
   "auth.lockMinutes": 15,
   "workflow.requireTechnicalReview": false,

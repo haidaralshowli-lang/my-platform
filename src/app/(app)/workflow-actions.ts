@@ -12,6 +12,9 @@ import {
   cancelWarning, createTemplate, prepareWarning, prepareWarningSchema, setTemplateActive, signedSchema, templateSchema, updateTemplate, uploadSignedWarning,
 } from "@/lib/services/warnings";
 import type { IncomingFile } from "@/lib/services/attachments";
+import { correctReceipt, dispatchSchema, receiptSchema, recordDispatch, recordReceipt } from "@/lib/services/deliveries";
+import { addHoliday, applyRuleToPending, createRule, decideExtension, endRule, extensionSchema, recordExtension, removeHoliday, ruleSchema } from "@/lib/services/deadlines";
+import { markRead } from "@/lib/services/notifications";
 
 const str = (f: FormData, k: string) => (typeof f.get(k) === "string" ? (f.get(k) as string) : "");
 const strings = (f: FormData) => Object.fromEntries([...f.entries()].filter(([, v]) => typeof v === "string")) as Record<string, string>;
@@ -205,4 +208,81 @@ export async function templateAction(_p: ActionResult | null, form: FormData): P
   } catch (e) {
     return toActionError(e);
   }
+}
+
+// ─── التبليغ والمدد ───
+
+
+export async function deliveryAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const id = str(form, "violationId");
+  const op = str(form, "op");
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    if (op === "dispatch") {
+      const parsed = dispatchSchema.safeParse(strings(form));
+      if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+      await recordDispatch(actor, str(form, "warningId"), parsed.data, ctx);
+    } else if (op === "receipt") {
+      const parsed = receiptSchema.safeParse(strings(form));
+      if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+      const [f] = await files(form, "file");
+      await recordReceipt(actor, str(form, "deliveryId"), parsed.data, f, ctx);
+    } else if (op === "correct") {
+      await correctReceipt(actor, str(form, "deliveryId"), { receivedDate: str(form, "receivedDate"), receivedTime: str(form, "receivedTime"), reason: str(form, "reason") }, ctx);
+    } else if (op === "apply_rule") {
+      await applyRuleToPending(actor, id, ctx);
+    } else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/violations/${id}`);
+  redirect(`/violations/${id}?done=delivery_${op}`);
+}
+
+export async function extensionAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const id = str(form, "violationId");
+  const op = str(form, "op");
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    if (op === "record") {
+      const parsed = extensionSchema.safeParse(strings(form));
+      if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+      await recordExtension(actor, id, parsed.data, await files(form, "files"), ctx);
+    } else if (op === "approve" || op === "reject") {
+      const days = str(form, "grantedDays");
+      await decideExtension(actor, str(form, "requestId"), op === "approve", days ? Number(days) : null, str(form, "notes") || null, ctx);
+    } else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/violations/${id}`);
+  redirect(`/violations/${id}?done=extension_${op}`);
+}
+
+export async function deadlineAdminAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const op = str(form, "op");
+  try {
+    const actor = await actionActor("deadline.rules_manage");
+    const ctx = await requestContext();
+    if (op === "rule") {
+      const parsed = ruleSchema.safeParse(strings(form));
+      if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+      await createRule(actor, parsed.data, ctx);
+    } else if (op === "end_rule") await endRule(actor, str(form, "ruleId"), str(form, "effectiveTo"), str(form, "reason"), ctx);
+    else if (op === "holiday") await addHoliday(actor, str(form, "date"), str(form, "nameAr"), ctx);
+    else if (op === "remove_holiday") await removeHoliday(actor, str(form, "holidayId"), ctx);
+    else throw new AppError("إجراء غير معروف");
+    return done("/deadlines/rules", "تم الحفظ");
+  } catch (e) {
+    return toActionError(e);
+  }
+}
+
+export async function markNotificationsAction(form: FormData): Promise<void> {
+  const actor = await actionActor();
+  const ids = form.getAll("id").map(String);
+  await markRead(actor.id, ids.length ? ids : "all");
+  revalidatePath("/notifications");
 }

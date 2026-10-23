@@ -880,7 +880,8 @@ model DeadlineCalculation {
   id                 String         @id @default(cuid())
   violationId        String
   warningId          String
-  ruleId             String
+  /// فارغ حين لا توجد قاعدة سارية (الحالة PENDING_REVIEW) فلا تُخترع مدة
+  ruleId             String?
   /// نسخة القاعدة وقت الاحتساب، حتى لا يؤثر تعديل القاعدة بأثر رجعي
   ruleSnapshot       Json
   startDate          DateTime?
@@ -896,7 +897,7 @@ model DeadlineCalculation {
 
   violation Violation          @relation(fields: [violationId], references: [id], onDelete: Restrict)
   warning   Warning            @relation(fields: [warningId], references: [id], onDelete: Restrict)
-  rule      LegalDeadlineRule  @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  rule      LegalDeadlineRule? @relation(fields: [ruleId], references: [id], onDelete: Restrict)
   extensions ExtensionRequest[]
 
   @@index([status, dueDate])

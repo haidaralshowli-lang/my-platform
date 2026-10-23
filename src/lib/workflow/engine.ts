@@ -5,6 +5,7 @@ import { writeAudit, type AuditContext } from "@/lib/audit";
 import { can, inScope, type Actor } from "@/lib/rbac/actor";
 import type { PermissionCode } from "@/lib/rbac/catalog";
 import { STAGE_LABELS } from "./labels";
+import { notifyTransition } from "@/lib/services/notifications";
 
 /// تعريف انتقال مسموح. الانتقالات معرّفة في الشيفرة (لا تُعدَّل من الواجهة) حتى تبقى قابلة للمراجعة والاختبار.
 export type TransitionDef = {
@@ -23,6 +24,19 @@ export type TransitionDef = {
 };
 
 const registry = new Map<string, TransitionDef>();
+
+/// منفذ نظامي للمهام الآلية (مثل انتهاء المدة). لا يملك أي صلاحية، ولا يطلق إلا الانتقالات النظامية.
+export const SYSTEM_ACTOR: Actor = {
+  id: "system",
+  username: "system",
+  fullName: "النظام (مهمة مجدولة)",
+  roles: ["SYSTEM"],
+  permissions: new Set(),
+  scope: "CENTRAL",
+  governorateId: null,
+  officeId: null,
+  mustChangePassword: false,
+};
 
 export function defineTransition(action: string, def: TransitionDef) {
   if (registry.has(action)) throw new Error(`انتقال مكرر: ${action}`);
@@ -62,7 +76,9 @@ export type TransitionOptions = {
 export async function applyTransition(tx: Tx, actor: Actor, violationId: string, action: string, opts: TransitionOptions = {}): Promise<Violation> {
   const def = getTransition(action);
   const v = await lockViolation(tx, violationId);
-  if (!inScope(actor, v)) throw notFound();
+  const isSystemActor = actor.id === SYSTEM_ACTOR.id;
+  if (isSystemActor && def.permission !== null) throw forbidden("المنفذ النظامي لا يطلق إلا الانتقالات النظامية");
+  if (!isSystemActor && !inScope(actor, v)) throw notFound();
   if (def.permission === null && !opts.system) throw forbidden("هذا الإجراء نظامي ولا يُنفَّذ يدوياً");
   if (def.permission && !can(actor, def.permission)) throw forbidden();
   if (opts.expectedVersion !== undefined && opts.expectedVersion !== v.version) {
@@ -90,7 +106,7 @@ export async function applyTransition(tx: Tx, actor: Actor, violationId: string,
       version: { increment: 1 },
     },
   });
-  await tx.violationStatusHistory.create({
+  const history = await tx.violationStatusHistory.create({
     data: {
       violationId: v.id,
       fromStage: v.stage,
@@ -104,7 +120,8 @@ export async function applyTransition(tx: Tx, actor: Actor, violationId: string,
     },
   });
   await writeAudit(tx, {
-    actor,
+    actor: isSystemActor ? null : actor,
+    username: isSystemActor ? "system" : undefined,
     action: `violation.${action}`,
     entityType: "Violation",
     entityId: v.id,
@@ -113,5 +130,6 @@ export async function applyTransition(tx: Tx, actor: Actor, violationId: string,
     reason,
     ctx: opts.ctx,
   });
+  await notifyTransition(tx, action, updated, history.id, actor.id);
   return updated;
 }
