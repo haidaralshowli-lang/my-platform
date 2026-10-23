@@ -1,8 +1,7 @@
 # النشر على Netlify (قاعدة البيانات على Supabase). راجع DEPLOYMENT.md
 [build]
-  # مع DIRECT_DATABASE_URL (سياق الإنتاج فقط): ترحيلات + بيانات أساسية + تهيئة أولى متساوية القوى، ثم البناء.
-  # بيئات المعاينة بلا هذا المتغير تبني فقط ولا تمس قاعدة البيانات.
-  command = "if [ -n \"$DIRECT_DATABASE_URL\" ]; then npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsx scripts/bootstrap.ts; fi && npm run build"
+  # الترحيلات والتهيئة الأولى ثم البناء؛ راجع الملف لمعاني أكواد الخروج
+  command = "sh scripts/netlify-build.sh"
   publish = ".next"
 
 [build.environment]
