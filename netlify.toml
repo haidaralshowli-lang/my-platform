@@ -1,6 +1,6 @@
 # النشر على Netlify (قاعدة البيانات على Supabase). راجع DEPLOYMENT.md
 [build]
-  command = "npx prisma migrate deploy && npm run build"
+  command = "npm run build"
   publish = ".next"
 
 [build.environment]

@@ -1227,3 +1227,13 @@ model NumberingSequence {
   lastValue Int      @default(0)
   updatedAt DateTime @updatedAt
 }
+
+/// محتوى الملفات عند استخدام محرك التخزين «db» (للنشر دون قرص دائم أو دون تخزين S3).
+/// لا يُعدَّل ولا يُحذف (مشغل قاعدة بيانات). البيانات الوصفية للمرفق في AttachmentVersion.
+model StoredBlob {
+  key         String   @id
+  data        Bytes
+  contentType String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+}

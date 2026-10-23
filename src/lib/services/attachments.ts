@@ -5,7 +5,7 @@ import { AppError, forbidden, notFound } from "@/lib/errors";
 import { writeAudit, type AuditContext } from "@/lib/audit";
 import { assertCan, can, inScope, type Actor } from "@/lib/rbac/actor";
 import { getSetting } from "@/lib/settings";
-import { storage, newStorageKey } from "@/lib/storage";
+import { storage, storageFor, newStorageKey } from "@/lib/storage";
 import { ALLOWED_TYPES, checkFile, FileRejected, safeDisplayName, scanForMalware } from "@/lib/storage/file-check";
 import { applyTransition } from "@/lib/workflow";
 import { VIOLATION_DOC_TYPES } from "@/lib/documents";
@@ -234,7 +234,7 @@ export async function readAttachmentVersion(actor: Actor, versionId: string, ctx
   }
   if (!canSeeConfidentiality(actor, attachment.confidentiality)) throw notFound();
   if (version.scanStatus === "INFECTED") throw new AppError("الملف محجوب لاحتوائه على برمجية خبيثة");
-  const data = await storage().get(version.storageKey);
+  const data = await storageFor(version.storageProvider).get(version.storageKey);
   if (attachment.confidentiality !== "NORMAL") {
     await prisma.$transaction((tx) =>
       writeAudit(tx, { actor, action: "attachment.downloaded", entityType: "Attachment", entityId: attachment.id, after: { versionId, versionNo: version.versionNo, confidentiality: attachment.confidentiality }, ctx }),

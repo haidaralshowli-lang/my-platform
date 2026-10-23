@@ -345,3 +345,28 @@ export async function refreshDeadlines(now = new Date()): Promise<RefreshResult>
 export function canManageDeadlines(actor: Actor) {
   return can(actor, "deadline.rules_manage");
 }
+
+const JOB_KEY = "job.deadlines.lastRunAt";
+
+/// يحجز تشغيل المهمة ذرياً: ينجح لطلب واحد فقط إذا مضى على آخر تشغيل أكثر من minMinutes
+async function claimDeadlineJob(minMinutes: number, now: Date): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ key: string }[]>`
+    INSERT INTO "SystemSetting" ("key", "value", "updatedAt")
+    VALUES (${JOB_KEY}, to_jsonb(${now.toISOString()}::text), ${now})
+    ON CONFLICT ("key") DO UPDATE SET "value" = EXCLUDED."value", "updatedAt" = EXCLUDED."updatedAt"
+    WHERE "SystemSetting"."updatedAt" < ${new Date(now.getTime() - minMinutes * 60_000)}
+    RETURNING "key"`;
+  return rows.length > 0;
+}
+
+/// تشغيل احتياطي من داخل التطبيق: حين يتعذّر على المجدول الخارجي الوصول (مثلاً حماية الموقع بتسجيل دخول الفريق)
+/// تُشغَّل المهمة بعد استجابة أول طلب لمستخدم مسجّل، مرة واحدة كل ساعة على الأكثر. المهمة نفسها متساوية القوى (idempotent).
+export async function maybeRefreshDeadlines(now = new Date()): Promise<RefreshResult | null> {
+  if (!(await claimDeadlineJob(55, now))) return null;
+  return refreshDeadlines(now);
+}
+
+/// يسجّل تشغيلاً تمّ عبر المجدول حتى لا يتكرر التشغيل الاحتياطي في الساعة نفسها
+export async function markDeadlineJobRun(now = new Date()): Promise<void> {
+  await claimDeadlineJob(0, now);
+}

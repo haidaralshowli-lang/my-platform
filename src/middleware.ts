@@ -7,7 +7,7 @@ const SESSION_COOKIE = "cmc_session";
 // التحقق الفعلي من الجلسة والصلاحيات يجري في الخادم داخل كل صفحة وإجراء.
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const nonce = btoa(crypto.randomUUID());
   const isDev = process.env.NODE_ENV !== "production";
   const csp = [
     "default-src 'self'",

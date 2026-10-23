@@ -192,3 +192,18 @@ describe("إشعارات سير العمل", () => {
     expect(await prisma.notification.count({ where: { userId: c.delivery.id, violationId: id, type: "transition.warning_signed" } })).toBe(0);
   });
 });
+
+describe("التشغيل الاحتياطي لمهمة المدد", () => {
+  it("يُشغَّل مرة واحدة فقط ضمن الساعة حتى مع الطلبات المتزامنة", async () => {
+    const { maybeRefreshDeadlines, markDeadlineJobRun } = await import("@/lib/services/deadlines");
+    await prisma.systemSetting.deleteMany({ where: { key: "job.deadlines.lastRunAt" } });
+    const now = new Date();
+    const runs = await Promise.all([1, 2, 3, 4].map(() => maybeRefreshDeadlines(now)));
+    expect(runs.filter(Boolean)).toHaveLength(1);
+    expect(await maybeRefreshDeadlines(new Date(now.getTime() + 30 * 60_000))).toBeNull();
+    expect(await maybeRefreshDeadlines(new Date(now.getTime() + 56 * 60_000))).not.toBeNull();
+    // تشغيل المجدول يُسجَّل فيمنع التشغيل الاحتياطي بعده مباشرة
+    await markDeadlineJobRun(new Date(now.getTime() + 120 * 60_000));
+    expect(await maybeRefreshDeadlines(new Date(now.getTime() + 121 * 60_000))).toBeNull();
+  });
+});

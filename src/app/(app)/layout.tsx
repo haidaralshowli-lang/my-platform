@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { Bell, LogOut, KeyRound } from "lucide-react";
 import { unreadCount } from "@/lib/services/notifications";
+import { maybeRefreshDeadlines } from "@/lib/services/deadlines";
 import { requireActor } from "@/lib/auth/server";
 import { visibleNav } from "@/lib/nav";
 import { SYSTEM_ROLES } from "@/lib/rbac/catalog";
@@ -14,6 +16,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const items = visibleNav(actor).map(({ href, label, icon }) => ({ href, label, icon }));
   const roleNames = actor.roles.map((r) => SYSTEM_ROLES[r]?.nameAr ?? r).join("، ");
   const unread = await unreadCount(actor.id);
+  // تحديث احتياطي للمدد بعد إرسال الصفحة (مرة كل ساعة على الأكثر)؛ لا يؤخر الاستجابة ولا يُظهر أخطاءه للمستخدم
+  after(() => maybeRefreshDeadlines().catch((e) => console.error("[deadlines-fallback]", e instanceof Error ? e.message : e)));
   return (
     <div className="flex min-h-dvh">
       <Sidebar items={items} />

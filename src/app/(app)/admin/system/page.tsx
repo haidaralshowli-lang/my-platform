@@ -3,6 +3,7 @@ import { requirePagePermission } from "@/lib/auth/server";
 import { Card, PageHeader } from "@/components/ui";
 import { ActForm } from "@/components/act-form";
 import { currentSettings } from "@/lib/services/system-settings";
+import { formatDateTime } from "@/lib/datetime";
 import { systemSettingAction } from "../settings/actions";
 
 export const metadata = { title: "إعدادات النظام" };
@@ -25,7 +26,13 @@ const BOOL: [string, string][] = [
 
 export default async function SystemSettingsPage() {
   await requirePagePermission("settings.manage");
-  const [s, stages] = await Promise.all([currentSettings(), prisma.workflowStageConfig.findMany({ orderBy: { sortOrder: "asc" } })]);
+  const [s, stages, jobs] = await Promise.all([
+    currentSettings(),
+    prisma.workflowStageConfig.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.systemSetting.findMany({ where: { key: { in: ["job.deadlines.lastRunAt", "job.backup.lastSuccess"] } } }),
+  ]);
+  const deadlinesRun = jobs.find((j) => j.key === "job.deadlines.lastRunAt")?.updatedAt;
+  const backup = jobs.find((j) => j.key === "job.backup.lastSuccess")?.value as { at?: string; manifest?: string } | undefined;
   const val = (k: string) => {
     const v = s[k];
     return typeof v === "object" && v && "pattern" in v ? String((v as { pattern: string }).pattern) : String(v ?? "");
@@ -65,6 +72,12 @@ export default async function SystemSettingsPage() {
             </ActForm>
           </Card>
         </div>
+        <Card title="حالة المهام التشغيلية" className="lg:col-span-2">
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div><dt className="text-xs text-muted">آخر تشغيل لمهمة المدد والتنبيهات</dt><dd>{deadlinesRun ? formatDateTime(deadlinesRun) : "لم تُشغَّل بعد"}</dd></div>
+            <div><dt className="text-xs text-muted">آخر نسخة احتياطية ناجحة</dt><dd>{backup?.at ? <>{formatDateTime(backup.at)} — <bdi dir="ltr" className="text-xs">{backup.manifest}</bdi></> : "لا توجد نسخة مسجّلة — راجع DEPLOYMENT.md (npm run backup)"}</dd></div>
+          </dl>
+        </Card>
         <Card title="المدد الإدارية للمراحل (تنبيهات التأخر)" className="lg:col-span-2">
           <p className="mb-3 text-xs text-muted">عند تجاوز المعاملة هذه المدة في المرحلة تُرسل المهمة المجدولة تنبيهاً لأصحاب الإجراء التالي (مرة واحدة لكل دخول للمرحلة). فارغ = بلا تنبيه.</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
