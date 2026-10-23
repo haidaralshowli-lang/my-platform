@@ -29,6 +29,7 @@ step() {
 if [ -n "${DIRECT_DATABASE_URL:-}" ]; then
   step probe probe npx tsx scripts/db-probe.ts
   step migrate 41 npx prisma migrate deploy
+  step probe-runtime probe npx tsx scripts/db-probe.ts --runtime
   # البيانات الأساسية والتهيئة عبر الاتصال المباشر (وضع الجلسة) بصلاحية المالك
   step seed 42 env DATABASE_URL="$DIRECT_DATABASE_URL" npx tsx prisma/seed.ts
   step bootstrap 43 env DATABASE_URL="$DIRECT_DATABASE_URL" npx tsx scripts/bootstrap.ts

@@ -1,12 +1,13 @@
 // فحص الاتصال بقاعدة البيانات أثناء البناء، بأكواد خروج مميزة لأن سجل البناء قد لا يكون متاحاً لمن ينشر:
 //   0 نجاح · 21 تعذر الوصول/DNS · 22 فشل المصادقة أو المستأجر غير موجود · 23 خطأ TLS · 24 خطأ آخر
+//   --runtime: يفحص DATABASE_URL (دور التطبيق) بقراءة جدول وتعديل فارغ
 //   30 فشل المضيف المحدد ونجح مضيف التجميع البديل (aws-0 ↔ aws-1): صحّح المضيف في متغيرات البيئة
 import { PrismaClient } from "@prisma/client";
 
-async function tryUrl(url: string): Promise<number> {
+async function tryUrl(url: string, sql = "SELECT 1"): Promise<number> {
   const db = new PrismaClient({ datasources: { db: { url } } });
   try {
-    await db.$queryRawUnsafe("SELECT 1");
+    await db.$queryRawUnsafe(sql);
     return 0;
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
@@ -30,4 +31,13 @@ async function main() {
   return code;
 }
 
-main().then((c) => process.exit(c));
+/// بعد الترحيلات: اتصال التشغيل الفعلي (DATABASE_URL، دور التطبيق عبر مجمّع المعاملات) يقرأ جداول التطبيق ويكتب في جدول عادي
+export async function probeRuntime(): Promise<number> {
+  const url = process.env.DATABASE_URL;
+  if (!url) return 0;
+  const read = await tryUrl(url, `SELECT count(*) FROM "User"`);
+  if (read) return read;
+  return tryUrl(url, `UPDATE "SystemSetting" SET "key" = "key" WHERE false`);
+}
+
+(process.argv.includes("--runtime") ? probeRuntime() : main()).then((c) => process.exit(c));
