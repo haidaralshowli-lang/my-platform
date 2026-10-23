@@ -1,0 +1,1223 @@
+// منصة إدارة المخالفات – هيئة الإعلام والاتصالات العراقية
+// مخطط قاعدة البيانات (PostgreSQL). التوثيق التفصيلي في DATABASE.md
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// ───────────────────────────── التعدادات ─────────────────────────────
+
+/// الحالة العامة للمخالفة (مستقلة عن المرحلة والنتيجة)
+enum GeneralStatus {
+  OPEN
+  CLOSED
+}
+
+/// المرحلة الإجرائية الحالية
+enum ViolationStage {
+  DRAFT
+  REGISTERED
+  AWAITING_REPORT
+  AWAITING_FINAL_APPROVAL
+  AWAITING_TECHNICAL
+  AWAITING_LEGAL
+  AWAITING_WARNING_APPROVAL
+  WARNING_PREPARATION
+  AWAITING_WARNING_SIGNATURE
+  AWAITING_DELIVERY
+  AWAITING_RECEIPT_PROOF
+  DEADLINE_RUNNING
+  AWAITING_RESPONSE_RECORD
+  AWAITING_RESPONSE_VERIFICATION
+  EXTENSION_UNDER_REVIEW
+  OBJECTION_UNDER_REVIEW
+  DEADLINE_EXPIRED
+  AWAITING_NON_RESPONSE_APPROVAL
+  CRIMINAL_CASE
+  AWAITING_JUDGMENT
+  AWAITING_FINAL_VERIFICATION
+  AWAITING_CLOSURE_APPROVAL
+  NOT_APPROVED
+  CLOSED
+}
+
+/// النتيجة أو المسار النهائي
+enum ViolationOutcome {
+  FINANCIAL_RESPONSE
+  TECHNICAL_RESPONSE
+  LEGAL_RESPONSE
+  FULL_REMOVAL
+  NON_RESPONSE_CRIMINAL
+  OBJECTION_APPEAL
+  NOT_APPROVED
+  OTHER
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+/// نطاق اطلاع المستخدم
+enum AccessScope {
+  OFFICE
+  GOVERNORATE
+  CENTRAL
+}
+
+enum Confidentiality {
+  NORMAL
+  RESTRICTED
+  CONFIDENTIAL
+}
+
+enum AttachmentApproval {
+  DRAFT
+  APPROVED
+  SUPERSEDED
+  WITHDRAWN
+}
+
+enum ScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  NOT_SCANNED
+}
+
+enum ApprovalKind {
+  FINAL_REGISTRATION
+  TECHNICAL_REVIEW
+  LEGAL_APPROVAL
+  WARNING_ISSUE
+  RESPONSE_VERIFICATION
+  REMOVAL_ACCEPTANCE
+  NON_RESPONSE
+  JUDGMENT_APPROVAL
+  CLOSURE
+  REOPEN
+}
+
+enum ApprovalDecision {
+  APPROVED
+  RETURNED
+  REJECTED
+  CLARIFICATION_REQUESTED
+}
+
+enum AssessmentStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  RETURNED
+}
+
+enum WarningStatus {
+  DRAFT
+  AWAITING_SIGNATURE
+  SIGNED
+  SENT
+  DELIVERED
+  CANCELLED
+}
+
+enum DeliveryMethod {
+  HAND
+  REGISTERED_MAIL
+  OFFICIAL_COURIER
+  EMAIL
+  OTHER
+}
+
+enum DurationUnit {
+  CALENDAR_DAYS
+  WORKING_DAYS
+}
+
+enum DeadlineStartEvent {
+  RECEIPT_DATE
+  DAY_AFTER_RECEIPT
+}
+
+enum ObjectionEffect {
+  NONE
+  SUSPEND
+  MANUAL_DECISION
+}
+
+enum DeadlineStatus {
+  NOT_STARTED
+  RUNNING
+  NEAR_EXPIRY
+  EXPIRED
+  EXTENDED
+  SUSPENDED
+  PENDING_REVIEW
+  STOPPED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ResponseKind {
+  FINANCIAL
+  TECHNICAL
+  LEGAL
+}
+
+enum ResponseStatus {
+  RECORDED
+  UNDER_VERIFICATION
+  ACCEPTED
+  PARTIALLY_ACCEPTED
+  REJECTED
+}
+
+enum ComplianceLevel {
+  FULL
+  PARTIAL
+  NOT_VERIFIED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  UNDER_AUDIT
+}
+
+enum ObjectionKind {
+  OBJECTION
+  APPEAL
+}
+
+enum CriminalCaseStatus {
+  PREPARING
+  REFERRED
+  IN_COURT
+  JUDGMENT_ISSUED
+  CLOSED
+}
+
+enum JudgmentProceduralStatus {
+  UNKNOWN
+  NOT_FINAL
+  APPEALED
+  FINAL
+}
+
+enum ClosurePath {
+  RESPONSE
+  CRIMINAL_CASE
+  NOT_APPROVED
+  OTHER
+}
+
+enum LegalDocType {
+  LAW
+  REGULATION
+  INSTRUCTION
+  DECISION
+  CIRCULAR
+  TECHNICAL_STANDARD
+  OTHER
+}
+
+enum LegalDocStatus {
+  DRAFT
+  IN_FORCE
+  AMENDED
+  REPEALED
+  ARCHIVED
+}
+
+enum LegalRefPurpose {
+  POTENTIAL
+  TECHNICAL
+  LEGAL
+  WARNING
+}
+
+// ───────────────────────────── البيانات المرجعية ─────────────────────────────
+
+model Governorate {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  nameAr    String   @unique
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  offices    Office[]
+  users      User[]
+  violations Violation[]
+}
+
+model Office {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  nameAr        String
+  governorateId String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  governorate Governorate @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  divisions   Division[]
+  users       User[]
+  violations  Violation[]
+
+  @@unique([governorateId, nameAr])
+  @@index([governorateId])
+}
+
+/// الشعبة المختصة
+model Division {
+  id        String   @id @default(cuid())
+  nameAr    String
+  officeId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  office     Office?     @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  users      User[]
+  violations Violation[]
+
+  @@unique([officeId, nameAr])
+}
+
+model ViolationType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  nameAr      String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  violations    Violation[]
+  deadlineRules LegalDeadlineRule[]
+}
+
+model DetectionSource {
+  id       String  @id @default(cuid())
+  nameAr   String  @unique
+  isActive Boolean @default(true)
+
+  violations Violation[]
+}
+
+/// نوع الجهة المخالفة
+model EntityType {
+  id       String  @id @default(cuid())
+  nameAr   String  @unique
+  isActive Boolean @default(true)
+
+  violations Violation[]
+}
+
+/// نوع النشاط الإعلامي أو الاتصالي
+model ActivityType {
+  id       String  @id @default(cuid())
+  nameAr   String  @unique
+  isActive Boolean @default(true)
+
+  violations Violation[]
+}
+
+/// تصنيفات نتيجة الحكم القضائي (قائمة قابلة للإدارة)
+model JudgmentResultType {
+  id       String  @id @default(cuid())
+  nameAr   String  @unique
+  isActive Boolean @default(true)
+
+  judgments CourtJudgment[]
+}
+
+model Holiday {
+  id     String   @id @default(cuid())
+  date   DateTime @unique @db.Date
+  nameAr String
+}
+
+// ───────────────────────────── المستخدمون والصلاحيات ─────────────────────────────
+
+model User {
+  id                 String      @id @default(cuid())
+  username           String      @unique
+  fullName           String
+  email              String?     @unique
+  jobTitle           String?
+  passwordHash       String
+  isActive           Boolean     @default(true)
+  mustChangePassword Boolean     @default(true)
+  scope              AccessScope @default(OFFICE)
+  governorateId      String?
+  officeId           String?
+  divisionId         String?
+  lastLoginAt        DateTime?
+  failedLoginCount   Int         @default(0)
+  lockedUntil        DateTime?
+  passwordChangedAt  DateTime?
+  isDemo             Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  governorate Governorate? @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  office      Office?      @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  division    Division?    @relation(fields: [divisionId], references: [id], onDelete: Restrict)
+  roles       UserRole[]
+  sessions    Session[]
+
+  createdViolations Violation[]     @relation("ViolationCreatedBy")
+  assignedCases     CriminalCase[]  @relation("CaseFollowUpOwner")
+  notifications     Notification[]
+  approvals         Approval[]
+
+  @@index([governorateId])
+  @@index([officeId])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  nameAr      String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id      String @id @default(cuid())
+  code    String @unique
+  nameAr  String
+  groupAr String
+
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  grantedAt DateTime @default(now())
+  grantedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@id([roleId, permissionId])
+}
+
+/// جلسات الدخول: يُخزَّن تجزئة رمز الجلسة فقط وليس الرمز نفسه
+model Session {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  ip         String?
+  userAgent  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  username  String
+  ip        String?
+  success   Boolean
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([username, createdAt])
+  @@index([ip, createdAt])
+}
+
+// ───────────────────────────── المخالفة ─────────────────────────────
+
+model Violation {
+  id                   String           @id @default(cuid())
+  /// الرقم الرسمي: يُولَّد في الخادم عند تسجيل المسودة رسمياً
+  number               String?          @unique
+  draftRef             String           @unique
+  paperReportNumber    String?
+  officialLetterNumber String?
+  discoveredAt         DateTime?
+  registeredAt         DateTime?
+  governorateId        String
+  officeId             String
+  divisionId           String?
+  violationTypeId      String?
+  offenderName         String
+  entityTypeId         String?
+  offenderLicenseNo    String?
+  activityTypeId       String?
+  offenderAddress      String?
+  latitude             Decimal?         @db.Decimal(9, 6)
+  longitude            Decimal?         @db.Decimal(9, 6)
+  description          String?
+  detectionSourceId    String?
+  organizerName        String?
+  priority             Priority         @default(NORMAL)
+  internalNotes        String?
+  generalStatus        GeneralStatus    @default(OPEN)
+  stage                ViolationStage   @default(DRAFT)
+  outcome              ViolationOutcome?
+  createdById          String
+  /// رقم إصدار للحماية من التعديل المتزامن
+  version              Int              @default(1)
+  isDemo               Boolean          @default(false)
+  archivedAt           DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  governorate     Governorate      @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  office          Office           @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  division        Division?        @relation(fields: [divisionId], references: [id], onDelete: Restrict)
+  violationType   ViolationType?   @relation(fields: [violationTypeId], references: [id], onDelete: Restrict)
+  entityType      EntityType?      @relation(fields: [entityTypeId], references: [id], onDelete: Restrict)
+  activityType    ActivityType?    @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
+  detectionSource DetectionSource? @relation(fields: [detectionSourceId], references: [id], onDelete: Restrict)
+  createdBy       User             @relation("ViolationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  statusHistory        ViolationStatusHistory[]
+  attachments          Attachment[]
+  legalReferences      ViolationLegalReference[]
+  approvals            Approval[]
+  technicalAssessments TechnicalAssessment[]
+  legalAssessments     LegalAssessment[]
+  warnings             Warning[]
+  deadlines            DeadlineCalculation[]
+  extensionRequests    ExtensionRequest[]
+  responses            Response[]
+  removalRecords       RemovalRecord[]
+  objections           Objection[]
+  criminalCase         CriminalCase?
+  closureRequests      ClosureRequest[]
+  reopenRecords        ReopenRecord[]
+  notifications        Notification[]
+
+  @@index([governorateId, officeId])
+  @@index([stage])
+  @@index([generalStatus])
+  @@index([violationTypeId])
+  @@index([offenderName])
+  @@index([offenderLicenseNo])
+  @@index([paperReportNumber])
+  @@index([officialLetterNumber])
+  @@index([registeredAt])
+  @@index([isDemo])
+}
+
+/// سجل انتقالات المراحل والحالات (للقراءة والإضافة فقط)
+model ViolationStatusHistory {
+  id          String          @id @default(cuid())
+  violationId String
+  fromStage   ViolationStage?
+  toStage     ViolationStage
+  fromStatus  GeneralStatus?
+  toStatus    GeneralStatus
+  action      String
+  reason      String?
+  actorId     String
+  actorRoles  String[]
+  createdAt   DateTime        @default(now())
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+
+  @@index([violationId, createdAt])
+}
+
+/// إعداد المراحل القابل للتهيئة (التسمية والمدة الإدارية)؛ الانتقالات نفسها معرّفة في محرك سير العمل
+model WorkflowStageConfig {
+  stage     ViolationStage @id
+  labelAr   String
+  slaDays   Int?
+  sortOrder Int
+  updatedAt DateTime       @updatedAt
+}
+
+/// قرارات المصادقة على اختلاف أنواعها
+model Approval {
+  id          String           @id @default(cuid())
+  violationId String
+  kind        ApprovalKind
+  decision    ApprovalDecision
+  notes       String?
+  targetType  String?
+  targetId    String?
+  decidedById String
+  decidedRole String[]
+  decidedAt   DateTime         @default(now())
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  decidedBy User      @relation(fields: [decidedById], references: [id], onDelete: Restrict)
+
+  @@index([violationId, kind])
+}
+
+// ───────────────────────────── المرفقات ─────────────────────────────
+
+/// المرفق الموحد. ownerType/ownerId يحددان الكيان المالك، وviolationId لتطبيق نطاق الاطلاع
+model Attachment {
+  id               String             @id @default(cuid())
+  violationId      String?
+  ownerType        String
+  ownerId          String
+  documentType     String
+  description      String?
+  letterNumber     String?
+  letterDate       DateTime?          @db.Date
+  confidentiality  Confidentiality    @default(NORMAL)
+  approvalStatus   AttachmentApproval @default(DRAFT)
+  currentVersionNo Int                @default(1)
+  additionReason   String?
+  withdrawnAt      DateTime?
+  withdrawnReason  String?
+  createdById      String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  violation Violation?          @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  versions  AttachmentVersion[]
+
+  @@index([violationId])
+  @@index([ownerType, ownerId])
+}
+
+model AttachmentVersion {
+  id              String     @id @default(cuid())
+  attachmentId    String
+  versionNo       Int
+  originalName    String
+  storageProvider String
+  storageKey      String     @unique
+  mimeType        String
+  sizeBytes       Int
+  sha256          String
+  scanStatus      ScanStatus @default(NOT_SCANNED)
+  reason          String?
+  uploadedById    String
+  uploadedAt      DateTime   @default(now())
+
+  attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+
+  @@unique([attachmentId, versionNo])
+  @@index([sha256])
+}
+
+// ───────────────────────────── المكتبة القانونية ─────────────────────────────
+
+model LegalDocument {
+  id                 String         @id @default(cuid())
+  title              String
+  docType            LegalDocType
+  number             String?
+  issuedAt           DateTime?      @db.Date
+  issuer             String?
+  effectiveAt        DateTime?      @db.Date
+  status             LegalDocStatus @default(DRAFT)
+  description        String?
+  keywords           String[]
+  previousDocumentId String?
+  createdById        String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  previousDocument LegalDocument?         @relation("LegalDocLineage", fields: [previousDocumentId], references: [id], onDelete: Restrict)
+  nextDocuments    LegalDocument[]        @relation("LegalDocLineage")
+  versions         LegalDocumentVersion[]
+
+  @@index([title])
+  @@index([number])
+}
+
+model LegalDocumentVersion {
+  id           String   @id @default(cuid())
+  documentId   String
+  versionNo    Int
+  notes        String?
+  extractedText String?
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  document LegalDocument   @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  articles LegalArticle[]
+
+  @@unique([documentId, versionNo])
+}
+
+/// مادة/فقرة مفهرسة ضمن إصدار محدد من وثيقة مرجعية
+model LegalArticle {
+  id                String   @id @default(cuid())
+  documentVersionId String
+  articleNumber     String
+  paragraph         String?
+  text              String
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  documentVersion LegalDocumentVersion      @relation(fields: [documentVersionId], references: [id], onDelete: Restrict)
+  violationRefs   ViolationLegalReference[]
+
+  @@index([documentVersionId])
+}
+
+/// ربط المخالفة بمادة محددة من إصدار محدد (لا يتغير تلقائياً عند صدور إصدار جديد)
+model ViolationLegalReference {
+  id          String          @id @default(cuid())
+  violationId String
+  articleId   String
+  purpose     LegalRefPurpose
+  note        String?
+  addedById   String
+  createdAt   DateTime        @default(now())
+
+  violation Violation    @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  article   LegalArticle @relation(fields: [articleId], references: [id], onDelete: Restrict)
+
+  @@unique([violationId, articleId, purpose])
+}
+
+// ───────────────────────────── الموقف الفني والقانوني ─────────────────────────────
+
+model TechnicalAssessment {
+  id             String           @id @default(cuid())
+  violationId    String
+  position       String
+  reasons        String
+  evidence       String?
+  recommendation String?
+  status         AssessmentStatus @default(DRAFT)
+  preparedById   String
+  reviewedById   String?
+  reviewedAt     DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+
+  @@index([violationId])
+}
+
+model LegalAssessment {
+  id             String           @id @default(cuid())
+  violationId    String
+  opinion        String
+  reasons        String
+  proposedAction String?
+  notes          String?
+  status         AssessmentStatus @default(DRAFT)
+  preparedById   String
+  approvedById   String?
+  approvedAt     DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+
+  @@index([violationId])
+}
+
+// ───────────────────────────── الإنذارات والتبليغ ─────────────────────────────
+
+model WarningTemplate {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  isActive         Boolean  @default(true)
+  currentVersionNo Int      @default(1)
+  createdById      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  versions WarningTemplateVersion[]
+}
+
+model WarningTemplateVersion {
+  id          String   @id @default(cuid())
+  templateId  String
+  versionNo   Int
+  body        String
+  notes       String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  template WarningTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  warnings Warning[]
+
+  @@unique([templateId, versionNo])
+}
+
+model Warning {
+  id                  String        @id @default(cuid())
+  number              String        @unique
+  violationId         String
+  templateVersionId   String
+  /// نسخة النص كما أُنشئ (لقطة ثابتة لا تتأثر بتعديل القالب لاحقاً)
+  renderedBody        String
+  requiredAction      String
+  responsePeriodText  String?
+  status              WarningStatus @default(DRAFT)
+  preparedById        String
+  preparedAt          DateTime      @default(now())
+  signedAt            DateTime?
+  signerName          String?
+  signedAttachmentId  String?
+  signedUploadedById  String?
+  signedUploadedAt    DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  violation       Violation              @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  templateVersion WarningTemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+  deliveries      DeliveryRecord[]
+  deadlines       DeadlineCalculation[]
+
+  @@index([violationId])
+}
+
+model DeliveryRecord {
+  id                  String         @id @default(cuid())
+  warningId           String
+  sentAt              DateTime?
+  method              DeliveryMethod
+  receivedAt          DateTime?
+  recipientName       String?
+  recipientCapacity   String?
+  receiptNumber       String?
+  receiptAttachmentId String?
+  notes               String?
+  recordedById        String
+  recordedAt          DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  warning     Warning             @relation(fields: [warningId], references: [id], onDelete: Restrict)
+  corrections ReceiptCorrection[]
+
+  @@index([warningId])
+}
+
+/// تصحيح تاريخ الاستلام: تحفظ القيمة السابقة والجديدة والسبب والمعتمد
+model ReceiptCorrection {
+  id               String    @id @default(cuid())
+  deliveryRecordId String
+  oldReceivedAt    DateTime?
+  newReceivedAt    DateTime
+  reason           String
+  approvedById     String
+  createdAt        DateTime  @default(now())
+
+  deliveryRecord DeliveryRecord @relation(fields: [deliveryRecordId], references: [id], onDelete: Restrict)
+}
+
+// ───────────────────────────── المدد القانونية ─────────────────────────────
+
+model LegalDeadlineRule {
+  id               String             @id @default(cuid())
+  code             String             @unique
+  nameAr           String
+  violationTypeId  String?
+  duration         Int
+  unit             DurationUnit
+  startEvent       DeadlineStartEvent
+  excludeHolidays  Boolean            @default(false)
+  legalBasis       String
+  extensionAllowed Boolean            @default(false)
+  maxExtensionDays Int?
+  objectionEffect  ObjectionEffect    @default(MANUAL_DECISION)
+  warnBeforeDays   Int                @default(3)
+  effectiveFrom    DateTime           @db.Date
+  effectiveTo      DateTime?          @db.Date
+  isActive         Boolean            @default(true)
+  createdById      String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  violationType ViolationType?        @relation(fields: [violationTypeId], references: [id], onDelete: Restrict)
+  calculations  DeadlineCalculation[]
+
+  @@index([violationTypeId, isActive])
+}
+
+model DeadlineCalculation {
+  id                 String         @id @default(cuid())
+  violationId        String
+  warningId          String
+  ruleId             String
+  /// نسخة القاعدة وقت الاحتساب، حتى لا يؤثر تعديل القاعدة بأثر رجعي
+  ruleSnapshot       Json
+  startDate          DateTime?
+  originalDueDate    DateTime?
+  dueDate            DateTime?
+  status             DeadlineStatus @default(NOT_STARTED)
+  isCurrent          Boolean        @default(true)
+  totalExtensionDays Int            @default(0)
+  suspendedAt        DateTime?
+  suspensionReason   String?
+  computedAt         DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  violation Violation          @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  warning   Warning            @relation(fields: [warningId], references: [id], onDelete: Restrict)
+  rule      LegalDeadlineRule  @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  extensions ExtensionRequest[]
+
+  @@index([status, dueDate])
+  @@index([violationId, isCurrent])
+}
+
+model ExtensionRequest {
+  id             String        @id @default(cuid())
+  violationId    String
+  deadlineId     String
+  requestedAt    DateTime
+  requestedDays  Int
+  reasons        String
+  opinion        String?
+  status         RequestStatus @default(PENDING)
+  grantedDays    Int?
+  newDueDate     DateTime?
+  decisionNotes  String?
+  decidedById    String?
+  decidedAt      DateTime?
+  createdById    String
+  createdAt      DateTime      @default(now())
+
+  violation Violation           @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  deadline  DeadlineCalculation @relation(fields: [deadlineId], references: [id], onDelete: Restrict)
+
+  @@index([violationId])
+  @@index([status])
+}
+
+// ───────────────────────────── الاستجابات ─────────────────────────────
+
+model Response {
+  id            String         @id @default(cuid())
+  violationId   String
+  kind          ResponseKind
+  receivedAt    DateTime
+  letterNumber  String?
+  letterDate    DateTime?      @db.Date
+  summary       String
+  status        ResponseStatus @default(RECORDED)
+  decisionNotes String?
+  decidedById   String?
+  decidedAt     DateTime?
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  violation Violation          @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  financial FinancialResponse?
+  technical TechnicalResponse?
+  legal     LegalResponse?
+
+  @@index([violationId, kind])
+}
+
+model FinancialResponse {
+  responseId        String        @id
+  financialType     String
+  transactionNumber String?
+  /// المبلغ المستحق: يُدخل يدوياً من سند معتمد فقط، ولا يحتسبه النظام
+  amountDue         Decimal?      @db.Decimal(18, 2)
+  amountDueBasis    String?
+  auditResult       String?
+  paymentStatus     PaymentStatus @default(UNPAID)
+  officerName       String?
+
+  response Response  @relation(fields: [responseId], references: [id], onDelete: Restrict)
+  payments Payment[]
+}
+
+model Payment {
+  id                  String   @id @default(cuid())
+  financialResponseId String
+  amount              Decimal  @db.Decimal(18, 2)
+  paidAt              DateTime @db.Date
+  receiptNumber       String
+  overpaymentReason   String?
+  overpaymentApprover String?
+  recordedById        String
+  createdAt           DateTime @default(now())
+
+  financialResponse FinancialResponse @relation(fields: [financialResponseId], references: [responseId], onDelete: Restrict)
+
+  @@unique([financialResponseId, receiptNumber])
+}
+
+model TechnicalResponse {
+  responseId         String          @id
+  correctiveAction   String
+  implementedAt      DateTime?       @db.Date
+  inspectionReport   String?
+  verificationResult String?
+  compliance         ComplianceLevel @default(NOT_VERIFIED)
+  recommendation     String?
+
+  response Response @relation(fields: [responseId], references: [id], onDelete: Restrict)
+}
+
+model LegalResponse {
+  responseId     String  @id
+  legalType      String
+  content        String
+  legalOpinion   String?
+  proposedAction String?
+
+  response Response @relation(fields: [responseId], references: [id], onDelete: Restrict)
+}
+
+/// إزالة المخالفة بالكامل: نتيجة مستقلة تتطلب تحققاً واعتماداً
+model RemovalRecord {
+  id                 String        @id @default(cuid())
+  violationId        String
+  description        String
+  treatedAt          DateTime      @db.Date
+  verificationReport String?
+  inspectionResult   String?
+  verifiedByName     String?
+  status             RequestStatus @default(PENDING)
+  decisionNotes      String?
+  approvedById       String?
+  approvedAt         DateTime?
+  createdById        String
+  createdAt          DateTime      @default(now())
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+
+  @@index([violationId])
+}
+
+model Objection {
+  id                 String        @id @default(cuid())
+  violationId        String
+  kind               ObjectionKind
+  submittedAt        DateTime
+  referenceNumber    String?
+  content            String
+  competentAuthority String?
+  status             RequestStatus @default(PENDING)
+  outcome            String?
+  effectOnFlow       String?
+  decidedById        String?
+  decidedAt          DateTime?
+  createdById        String
+  createdAt          DateTime      @default(now())
+
+  violation Violation        @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  events    ObjectionEvent[]
+
+  @@index([violationId])
+}
+
+model ObjectionEvent {
+  id          String   @id @default(cuid())
+  objectionId String
+  eventAt     DateTime
+  description String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  objection Objection @relation(fields: [objectionId], references: [id], onDelete: Restrict)
+}
+
+// ───────────────────────────── الدعوى الجزائية ─────────────────────────────
+
+model CriminalCase {
+  id                String             @id @default(cuid())
+  number            String             @unique
+  violationId       String             @unique
+  warningId         String?
+  nonResponseProof  String
+  referralAt        DateTime?          @db.Date
+  courtCaseNumber   String?
+  courtName         String?
+  courtRegisteredAt DateTime?          @db.Date
+  lastAction        String?
+  status            CriminalCaseStatus @default(PREPARING)
+  followUpOwnerId   String?
+  notes             String?
+  createdById       String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  violation     Violation          @relation(fields: [violationId], references: [id], onDelete: Restrict)
+  followUpOwner User?              @relation("CaseFollowUpOwner", fields: [followUpOwnerId], references: [id], onDelete: Restrict)
+  events        CriminalCaseEvent[]
+  judgments     CourtJudgment[]
+
+  @@index([status])
+  @@index([courtCaseNumber])
+}
+
+model CriminalCaseEvent {
+  id            String    @id @default(cuid())
+  caseId        String
+  eventType     String
+  eventAt       DateTime
+  description   String
+  nextHearingAt DateTime?
+  createdById   String
+  createdAt     DateTime  @default(now())
+
+  criminalCase CriminalCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, eventAt])
+}
+
+model CourtJudgment {
+  id               String                   @id @default(cuid())
+  caseId           String
+  number           String
+  judgmentDate     DateTime                 @db.Date
+  courtName        String
+  summary          String
+  resultTypeId     String?
+  copyReceivedAt   DateTime?                @db.Date
+  proceduralStatus JudgmentProceduralStatus @default(UNKNOWN)
+  appealNote       String?
+  legalNotes       String?
+  attachmentId     String?
+  enteredById      String
+  approvedById     String?
+  approvedAt       DateTime?
+  createdAt        DateTime                 @default(now())
+
+  criminalCase CriminalCase        @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  resultType   JudgmentResultType? @relation(fields: [resultTypeId], references: [id], onDelete: Restrict)
+
+  @@index([number])
+}
+
+// ───────────────────────────── الإغلاق وإعادة الفتح ─────────────────────────────
+
+model ClosureRequest {
+  id                  String           @id @default(cuid())
+  violationId         String
+  path                ClosurePath
+  finalOutcome        ViolationOutcome
+  reason              String
+  notes               String?
+  supportingAttachmentIds String[]
+  status              RequestStatus    @default(PENDING)
+  requestedById       String
+  requestedAt         DateTime         @default(now())
+  decidedById         String?
+  decidedAt           DateTime?
+  decisionNotes       String?
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+
+  @@index([violationId])
+  @@index([status])
+}
+
+model ReopenRecord {
+  id               String   @id @default(cuid())
+  violationId      String
+  closureRequestId String?
+  reason           String
+  reopenedById     String
+  reopenedAt       DateTime @default(now())
+  restoredStage    ViolationStage
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Restrict)
+}
+
+// ───────────────────────────── الإشعارات والتدقيق والإعدادات ─────────────────────────────
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String
+  title       String
+  body        String?
+  link        String?
+  violationId String?
+  /// مفتاح منع التكرار: الإشعار نفسه لا يُنشأ مرتين للمستخدم نفسه
+  dedupeKey   String
+  createdAt   DateTime  @default(now())
+  readAt      DateTime?
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  violation Violation? @relation(fields: [violationId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt])
+}
+
+/// سجل التدقيق: إضافة فقط؛ محمي بمشغلات قاعدة بيانات تمنع التعديل والحذف، ومتسلسل بالتجزئة
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  at         DateTime @default(now())
+  userId     String?
+  username   String?
+  roles      String[]
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  reason     String?
+  requestId  String?
+  ip         String?
+  prevHash   String?
+  hash       String
+
+  @@index([entityType, entityId])
+  @@index([userId, at])
+  @@index([action, at])
+}
+
+model SystemSetting {
+  key         String   @id
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+/// تسلسلات الترقيم الرسمي؛ تُزاد ذرياً داخل المعاملة لمنع التكرار مع الطلبات المتزامنة
+model NumberingSequence {
+  key       String   @id
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,73 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-sans-arabic/400.css";
+@import "@fontsource/ibm-plex-sans-arabic/500.css";
+@import "@fontsource/ibm-plex-sans-arabic/600.css";
+@import "@fontsource/ibm-plex-sans-arabic/700.css";
+
+/* رموز التصميم: الكحلي والبرتقالي مرصودان من مطبوعات الهيأة؛ الرماديان مشتقان (راجع ARCHITECTURE.md) */
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", system-ui, sans-serif;
+
+  --color-brand: #2a314d;
+  --color-brand-dark: #1f2540;
+  --color-brand-soft: #e9ebf2;
+  --color-accent: #f47505; /* للزخرفة والحدود فقط؛ تباينه مع الأبيض غير كافٍ للنصوص */
+  --color-band: #f2f2f2;
+  --color-ink: #11131a;
+  --color-muted: #5a6070;
+  --color-line: #d8dbe2;
+  --color-surface: #ffffff;
+  --color-page: #f6f7f9;
+
+  --color-tone-info: #1d4f91;
+  --color-tone-info-bg: #e7eef8;
+  --color-tone-warning: #8a5300;
+  --color-tone-warning-bg: #fdf1dc;
+  --color-tone-danger: #a1231b;
+  --color-tone-danger-bg: #fbe8e6;
+  --color-tone-success: #1e6b3a;
+  --color-tone-success-bg: #e4f3e9;
+  --color-tone-legal: #5b2d86;
+  --color-tone-legal-bg: #f0e8f7;
+  --color-tone-neutral: #3d4354;
+  --color-tone-neutral-bg: #eceef2;
+}
+
+html {
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "kern";
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* حقول النماذج */
+.field-input {
+  @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-xs transition
+    placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none
+    disabled:bg-band disabled:text-muted;
+}
+
+/* الأرقام والرموز اللاتينية داخل النص العربي */
+.ltr-num {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff;
+  }
+}

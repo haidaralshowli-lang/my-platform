@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+.env
+.env.*
+!.env.example
+storage/
+backups/
+*.log
+coverage/
+test-results/
+playwright-report/
+.netlify/
+next-env.d.ts
+*.tsbuildinfo
+tests/e2e/.state.json

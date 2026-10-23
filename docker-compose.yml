@@ -1,0 +1,53 @@
+# بيئة تشغيل كاملة: PostgreSQL + التطبيق (+ MinIO اختيارياً للتخزين المتوافق مع S3)
+# التشغيل: cp .env.example .env && (عدّل القيم) && docker compose up -d --build
+# مع MinIO: docker compose --profile s3 up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cmc_violations
+      POSTGRES_USER: ${POSTGRES_USER:-cmc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ضع POSTGRES_PASSWORD في ملف .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d cmc_violations"]
+      interval: 10s
+      retries: 5
+    # لا يُنشر منفذ قاعدة البيانات خارج شبكة الحاويات
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cmc}:${POSTGRES_PASSWORD}@db:5432/cmc_violations
+      DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-cmc}:${POSTGRES_PASSWORD}@db:5432/cmc_violations
+      STORAGE_LOCAL_DIR: /app/storage
+    volumes:
+      - filestore:/app/storage
+    ports:
+      # يُربط على المضيف المحلي فقط؛ الوصول الخارجي عبر وكيل عكسي HTTPS (انظر DEPLOYMENT.md)
+      - "127.0.0.1:3000:3000"
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    profiles: ["s3"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:?ضع S3_SECRET_ACCESS_KEY في ملف .env}
+    volumes:
+      - miniodata:/data
+    ports:
+      - "127.0.0.1:9001:9001"
+
+volumes:
+  pgdata:
+  filestore:
+  miniodata:
