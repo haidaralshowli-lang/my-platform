@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Field } from "@/components/ui";
-import { FormMessage, SubmitButton } from "@/components/client-ui";
+import { FormMessage, SubmitButton, NoResetForm } from "@/components/client-ui";
 import { saveViolationAction } from "./actions";
 import type { ViolationFormOptions } from "./form-data";
 
@@ -50,7 +50,7 @@ export function ViolationForm({ options, initial, id, version, registered }: {
   );
 
   return (
-    <form action={action} className="flex flex-col gap-6">
+    <NoResetForm action={action} className="flex flex-col gap-6">
       {id && <input type="hidden" name="id" value={id} />}
       {version !== undefined && <input type="hidden" name="version" value={version} />}
       <FormMessage state={state} />
@@ -109,6 +109,6 @@ export function ViolationForm({ options, initial, id, version, registered }: {
       <div className="flex gap-2">
         <SubmitButton>{id ? "حفظ التعديلات" : "حفظ المسودة"}</SubmitButton>
       </div>
-    </form>
+    </NoResetForm>
   );
 }

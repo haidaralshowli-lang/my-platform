@@ -3,7 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { assessmentAction, gateDecisionAction, legalRefAction, searchArticlesAction, warningAction, type ArticleHit } from "../../workflow-actions";
 import { Field, buttonClass } from "@/components/ui";
-import { ConfirmButton, FormMessage, SubmitButton } from "@/components/client-ui";
+import { ConfirmButton, FormMessage, SubmitButton, NoResetForm } from "@/components/client-ui";
 
 type Decision = { value: string; label: string; variant?: "primary" | "danger" | "secondary"; needsReason?: boolean; confirm: string };
 
@@ -11,7 +11,7 @@ type Decision = { value: string; label: string; variant?: "primary" | "danger" |
 export function DecisionForm({ violationId, version, gate, decisions, title }: { violationId: string; version: number; gate: string; decisions: Decision[]; title: string }) {
   const [state, action] = useActionState(gateDecisionAction, null);
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <NoResetForm action={action} className="flex flex-col gap-3">
       <input type="hidden" name="violationId" value={violationId} />
       <input type="hidden" name="version" value={version} />
       <input type="hidden" name="gate" value={gate} />
@@ -26,7 +26,7 @@ export function DecisionForm({ violationId, version, gate, decisions, title }: {
           </ConfirmButton>
         ))}
       </div>
-    </form>
+    </NoResetForm>
   );
 }
 
@@ -39,7 +39,7 @@ export function AssessmentForm({ violationId, kind, initial, fields }: {
   const [state, action] = useActionState(assessmentAction, null);
   const fe = state && !state.ok ? state.fieldErrors : undefined;
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <NoResetForm action={action} className="flex flex-col gap-3">
       <input type="hidden" name="violationId" value={violationId} />
       <input type="hidden" name="kind" value={kind} />
       <FormMessage state={state} />
@@ -55,7 +55,7 @@ export function AssessmentForm({ violationId, kind, initial, fields }: {
           تقديم
         </ConfirmButton>
       </div>
-    </form>
+    </NoResetForm>
   );
 }
 
@@ -84,7 +84,7 @@ export function LinkArticleForm({ violationId, purposes }: { violationId: string
               {h.status === "DRAFT" || h.status === "ARCHIVED" ? (
                 <p className="mt-2 text-xs text-tone-danger">الوثيقة غير معتمدة أو مؤرشفة ولا يجوز الاستناد إليها.</p>
               ) : (
-                <form action={action} className="mt-2 flex flex-wrap items-end gap-2">
+                <NoResetForm action={action} className="mt-2 flex flex-wrap items-end gap-2">
                   <input type="hidden" name="violationId" value={violationId} />
                   <input type="hidden" name="articleId" value={h.id} />
                   <select name="purpose" className="field-input w-auto" aria-label="غرض الربط">
@@ -92,7 +92,7 @@ export function LinkArticleForm({ violationId, purposes }: { violationId: string
                   </select>
                   <input name="note" placeholder="ملاحظة (اختيارية)" className="field-input w-56" aria-label="ملاحظة" />
                   <SubmitButton variant="secondary">ربط المادة</SubmitButton>
-                </form>
+                </NoResetForm>
               )}
             </li>
           ))}
@@ -105,14 +105,14 @@ export function LinkArticleForm({ violationId, purposes }: { violationId: string
 export function UnlinkRefForm({ violationId, refId }: { violationId: string; refId: string }) {
   const [state, action] = useActionState(legalRefAction, null);
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <NoResetForm action={action} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="violationId" value={violationId} />
       <input type="hidden" name="refId" value={refId} />
       <input type="hidden" name="op" value="unlink" />
       <input name="reason" required placeholder="سبب الإزالة" className="field-input w-40 py-1 text-xs" aria-label="سبب الإزالة" />
       <ConfirmButton variant="ghost" title="إزالة السند" message="تُزال المادة من سندات المخالفة، ويُسجَّل الإجراء وسببه في سجل التدقيق.">إزالة</ConfirmButton>
       <FormMessage state={state} />
-    </form>
+    </NoResetForm>
   );
 }
 
@@ -120,7 +120,7 @@ export function PrepareWarningForm({ violationId, templates }: { violationId: st
   const [state, action] = useActionState(warningAction, null);
   const fe = state && !state.ok ? state.fieldErrors : undefined;
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <NoResetForm action={action} className="flex flex-col gap-3">
       <input type="hidden" name="violationId" value={violationId} />
       <input type="hidden" name="op" value="prepare" />
       <FormMessage state={state} />
@@ -138,7 +138,7 @@ export function PrepareWarningForm({ violationId, templates }: { violationId: st
         <input id="responsePeriodText" name="responsePeriodText" className="field-input" />
       </Field>
       <div><ConfirmButton title="إعداد الإنذار" message="سيولّد النظام رقم الإنذار ويحفظ نصه كما هو. يمكن إلغاؤه وإعادة إعداده قبل رفع النسخة الموقعة.">إعداد الإنذار</ConfirmButton></div>
-    </form>
+    </NoResetForm>
   );
 }
 
@@ -148,7 +148,7 @@ export function SignedWarningForm({ violationId, warningId, canCancel, canUpload
     <div className="flex flex-col gap-4">
       <FormMessage state={state} />
       {canUpload && (
-        <form action={action} className="grid gap-3 sm:grid-cols-2">
+        <NoResetForm action={action} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="violationId" value={violationId} />
           <input type="hidden" name="warningId" value={warningId} />
           <input type="hidden" name="op" value="signed" />
@@ -160,16 +160,16 @@ export function SignedWarningForm({ violationId, warningId, canCancel, canUpload
           <div className="sm:col-span-2">
             <ConfirmButton title="رفع النسخة الموقعة" message="يُعد الإنذار موقعاً برفع نسخته الضوئية الموقعة، وتنتقل المعاملة إلى مرحلة التبليغ.">رفع النسخة الموقعة</ConfirmButton>
           </div>
-        </form>
+        </NoResetForm>
       )}
       {canCancel && (
-        <form action={action} className="flex flex-wrap items-end gap-2 border-t border-line pt-3">
+        <NoResetForm action={action} className="flex flex-wrap items-end gap-2 border-t border-line pt-3">
           <input type="hidden" name="violationId" value={violationId} />
           <input type="hidden" name="warningId" value={warningId} />
           <input type="hidden" name="op" value="cancel" />
           <label className="flex flex-col gap-1 text-xs text-muted">سبب إلغاء الإنذار المعد<input name="reason" required className="field-input w-64" /></label>
           <ConfirmButton variant="danger" title="إلغاء الإنذار" message="يُلغى الإنذار غير الموقع ويبقى محفوظاً في السجل، وتعود المعاملة لمرحلة إعداد الإنذار.">إلغاء وإعادة الإعداد</ConfirmButton>
-        </form>
+        </NoResetForm>
       )}
     </div>
   );

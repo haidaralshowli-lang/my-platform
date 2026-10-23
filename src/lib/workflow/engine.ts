@@ -11,7 +11,8 @@ import { notifyTransition } from "@/lib/services/notifications";
 export type TransitionDef = {
   labelAr: string;
   from: ViolationStage[];
-  to: ViolationStage | ((v: Violation) => ViolationStage);
+  /// الدالة تستقبل المرحلة الهدف المطلوبة (إن وُجدت) ويجب أن تتحقق من أنها ضمن المسموح
+  to: ViolationStage | ((v: Violation, target?: ViolationStage) => ViolationStage);
   /// null = انتقال نظامي يُطلق داخلياً فقط (مثل اكتمال رفع المحضر)
   permission: PermissionCode | null;
   requiresReason?: boolean;
@@ -71,6 +72,10 @@ export type TransitionOptions = {
   ctx?: AuditContext;
   /// للانتقالات النظامية المطلقة من خدمة أخرى بعد تحققها من الصلاحية
   system?: boolean;
+  /// المرحلة الهدف للانتقالات متعددة الأهداف (تتحقق منها دالة to)
+  targetStage?: ViolationStage;
+  /// النتيجة النهائية للانتقالات التي تحددها حسب السياق
+  outcome?: ViolationOutcome;
 };
 
 export async function applyTransition(tx: Tx, actor: Actor, violationId: string, action: string, opts: TransitionOptions = {}): Promise<Violation> {
@@ -93,7 +98,7 @@ export async function applyTransition(tx: Tx, actor: Actor, violationId: string,
     const blocked = await def.guard(tx, v);
     if (blocked) throw new AppError(blocked);
   }
-  const toStage = typeof def.to === "function" ? def.to(v) : def.to;
+  const toStage = typeof def.to === "function" ? def.to(v, opts.targetStage) : def.to;
   const toStatus = def.status ?? (toStage === "CLOSED" ? "CLOSED" : "OPEN");
   const extra = def.effect ? await def.effect(tx, v, actor) : {};
   const updated = await tx.violation.update({
@@ -103,6 +108,7 @@ export async function applyTransition(tx: Tx, actor: Actor, violationId: string,
       stage: toStage,
       generalStatus: toStatus,
       ...(def.outcome !== undefined ? { outcome: def.outcome } : {}),
+      ...(opts.outcome !== undefined ? { outcome: opts.outcome } : {}),
       version: { increment: 1 },
     },
   });

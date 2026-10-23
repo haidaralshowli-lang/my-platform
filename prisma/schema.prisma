@@ -972,6 +972,7 @@ model FinancialResponse {
 model Payment {
   id                  String   @id @default(cuid())
   financialResponseId String
+  /// سالب = قيد عكسي لتصحيح تسديد خاطئ (بصلاحية معتمدة وسبب)؛ التسديدات لا تُعدَّل ولا تُحذف
   amount              Decimal  @db.Decimal(18, 2)
   paidAt              DateTime @db.Date
   receiptNumber       String
@@ -1039,6 +1040,10 @@ model Objection {
   status             RequestStatus @default(PENDING)
   outcome            String?
   effectOnFlow       String?
+  /// المرحلة التي كانت عليها المعاملة عند تقديم الاعتراض (للعودة إليها بقرار)
+  previousStage      ViolationStage?
+  /// هل عُلِّقت المدة بسبب الاعتراض (بحكم القاعدة أو بقرار موثق)
+  suspendedDeadline  Boolean       @default(false)
   decidedById        String?
   decidedAt          DateTime?
   createdById        String

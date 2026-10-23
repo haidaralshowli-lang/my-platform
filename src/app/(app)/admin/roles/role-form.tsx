@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { setRolePermissionsAction } from "../users/actions";
-import { ConfirmButton, FormMessage } from "@/components/client-ui";
+import { ConfirmButton, FormMessage, NoResetForm } from "@/components/client-ui";
 
 export function RolePermissionsForm({ roleId, groups, selected, disabledCodes, readOnly }: {
   roleId: string;
@@ -13,7 +13,7 @@ export function RolePermissionsForm({ roleId, groups, selected, disabledCodes, r
 }) {
   const [state, action] = useActionState(setRolePermissionsAction, null);
   return (
-    <form action={action} className="mt-4 flex flex-col gap-4">
+    <NoResetForm action={action} className="mt-4 flex flex-col gap-4">
       <input type="hidden" name="roleId" value={roleId} />
       <FormMessage state={state} />
       {readOnly && <p className="text-xs text-tone-warning">لا يمكنك تعديل صلاحيات دور تحمله.</p>}
@@ -35,6 +35,6 @@ export function RolePermissionsForm({ roleId, groups, selected, disabledCodes, r
           <ConfirmButton title="حفظ صلاحيات الدور" message="سيُطبَّق التغيير فوراً على جميع المستخدمين الذين يحملون هذا الدور، ويُسجَّل في سجل التدقيق.">حفظ الصلاحيات</ConfirmButton>
         </div>
       )}
-    </form>
+    </NoResetForm>
   );
 }

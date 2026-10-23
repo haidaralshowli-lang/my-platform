@@ -2,7 +2,7 @@
 
 import { useActionState, type ReactNode } from "react";
 import type { ActionResult } from "@/lib/errors";
-import { ConfirmButton, FormMessage, SubmitButton } from "./client-ui";
+import { ConfirmButton, FormMessage, SubmitButton, NoResetForm } from "./client-ui";
 import { cn, type ButtonVariant } from "./ui";
 
 /// نموذج إجراء عام: حقول مخفية + محتوى + زر تنفيذ (مع تأكيد اختياري للإجراءات الحساسة)
@@ -17,7 +17,7 @@ export function ActForm({ action, hidden, children, submit, confirm, variant = "
 }) {
   const [state, formAction] = useActionState(action, null);
   return (
-    <form action={formAction} className={cn("flex flex-col gap-3", className)}>
+    <NoResetForm action={formAction} className={cn("flex flex-col gap-3", className)}>
       {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       <FormMessage state={state} />
       {children}
@@ -28,6 +28,6 @@ export function ActForm({ action, hidden, children, submit, confirm, variant = "
           <SubmitButton variant={variant}>{submit}</SubmitButton>
         )}
       </div>
-    </form>
+    </NoResetForm>
   );
 }

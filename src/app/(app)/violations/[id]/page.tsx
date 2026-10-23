@@ -43,6 +43,19 @@ const DONE_MESSAGES: Record<string, string> = {
   extension_record: "سُجِّل طلب التمديد وهو قيد المراجعة. لم يتغير تاريخ الاستحقاق.",
   extension_approve: "تمت الموافقة على التمديد واحتُسب تاريخ الاستحقاق الجديد.",
   extension_reject: "رُفض طلب التمديد.",
+  response_record: "سُجِّلت الاستجابة وتوقف احتساب المدة بانتظار التحقق.",
+  response_payment: "سُجِّل التسديد.",
+  response_financial: "حُفظت البيانات المالية.",
+  response_verify: "سُجِّلت نتيجة التحقق الفني.",
+  response_opinion: "سُجِّل الرأي القانوني في الاستجابة.",
+  response_decide: "سُجِّل القرار في الاستجابة.",
+  removal_record: "سُجِّلت إزالة المخالفة وهي بانتظار الاعتماد.",
+  removal_approve: "اعتُمدت إزالة المخالفة بالكامل. الملف بانتظار التحقق النهائي والإغلاق.",
+  removal_reject: "لم تُقبل المعالجة.",
+  objection_record: "سُجِّل الاعتراض أو الطعن وهو قيد المراجعة.",
+  objection_suspend: "عُلِّقت المدة بقرار موثق.",
+  objection_event: "أُضيف الإجراء إلى ملف الاعتراض.",
+  objection_decide: "سُجِّل قرار الاعتراض.",
 };
 
 const sizeLabel = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} م.ب` : `${Math.max(1, Math.round(n / 1024))} ك.ب`);

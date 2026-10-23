@@ -3,7 +3,7 @@
 import { useActionState, useRef } from "react";
 import { createTemplateAction, templateAction } from "../workflow-actions";
 import { Field } from "@/components/ui";
-import { ConfirmButton, FormMessage, SubmitButton } from "@/components/client-ui";
+import { ConfirmButton, FormMessage, SubmitButton, NoResetForm } from "@/components/client-ui";
 
 function PlaceholderBar({ target, placeholders }: { target: React.RefObject<HTMLTextAreaElement | null>; placeholders: Record<string, string> }) {
   return (
@@ -29,7 +29,7 @@ export function CreateTemplateForm({ placeholders }: { placeholders: Record<stri
   const ref = useRef<HTMLTextAreaElement>(null);
   const fe = state && !state.ok ? state.fieldErrors : undefined;
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <NoResetForm action={action} className="flex flex-col gap-3">
       <FormMessage state={state} />
       <Field label="اسم القالب" htmlFor="name" required error={fe?.name}><input id="name" name="name" className="field-input" /></Field>
       <div className="text-xs text-muted">إدراج حقل يُعبأ تلقائياً:</div>
@@ -39,7 +39,7 @@ export function CreateTemplateForm({ placeholders }: { placeholders: Record<stri
       </Field>
       <Field label="ملاحظات" htmlFor="notes"><input id="notes" name="notes" className="field-input" /></Field>
       <div><SubmitButton>حفظ القالب</SubmitButton></div>
-    </form>
+    </NoResetForm>
   );
 }
 
@@ -49,20 +49,20 @@ export function EditTemplateForm({ templateId, body, active, placeholders }: { t
   return (
     <div className="flex flex-col gap-4">
       <FormMessage state={state} />
-      <form action={action} className="flex flex-col gap-3">
+      <NoResetForm action={action} className="flex flex-col gap-3">
         <input type="hidden" name="templateId" value={templateId} />
         <input type="hidden" name="op" value="update" />
         <PlaceholderBar target={ref} placeholders={placeholders} />
         <textarea ref={ref} name="body" rows={12} defaultValue={body} aria-label="نص القالب" className="field-input leading-7" />
         <input name="notes" required placeholder="سبب التعديل (إلزامي)" aria-label="سبب التعديل" className="field-input" />
         <div><ConfirmButton title="حفظ إصدار جديد" message="يُنشأ إصدار جديد من القالب. الإنذارات الصادرة سابقاً تحتفظ بنصها كما صدر.">حفظ كإصدار جديد</ConfirmButton></div>
-      </form>
-      <form action={action}>
+      </NoResetForm>
+      <NoResetForm action={action}>
         <input type="hidden" name="templateId" value={templateId} />
         <input type="hidden" name="op" value="toggle" />
         <input type="hidden" name="active" value={String(active)} />
         <SubmitButton variant={active ? "danger" : "secondary"}>{active ? "تعطيل القالب" : "تفعيل القالب"}</SubmitButton>
-      </form>
+      </NoResetForm>
     </div>
   );
 }

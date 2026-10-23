@@ -15,6 +15,11 @@ import type { IncomingFile } from "@/lib/services/attachments";
 import { correctReceipt, dispatchSchema, receiptSchema, recordDispatch, recordReceipt } from "@/lib/services/deliveries";
 import { addHoliday, applyRuleToPending, createRule, decideExtension, endRule, extensionSchema, recordExtension, removeHoliday, ruleSchema } from "@/lib/services/deadlines";
 import { markRead } from "@/lib/services/notifications";
+import {
+  addPayment, decideRemoval, decideResponse, financialSchema, giveLegalOpinion, legalOpinionSchema, legalResponseSchema, paymentSchema, recordRemoval, recordResponse,
+  removalSchema, responseBaseSchema, technicalResponseSchema, technicalVerifySchema, updateFinancial, verifyTechnicalResponse,
+} from "@/lib/services/responses";
+import { addObjectionEvent, decideObjection, objectionDecisionSchema, objectionSchema, recordObjection, suspendForObjection } from "@/lib/services/objections";
 
 const str = (f: FormData, k: string) => (typeof f.get(k) === "string" ? (f.get(k) as string) : "");
 const strings = (f: FormData) => Object.fromEntries([...f.entries()].filter(([, v]) => typeof v === "string")) as Record<string, string>;
@@ -285,4 +290,98 @@ export async function markNotificationsAction(form: FormData): Promise<void> {
   const ids = form.getAll("id").map(String);
   await markRead(actor.id, ids.length ? ids : "all");
   revalidatePath("/notifications");
+}
+
+// ─── الاستجابات والإزالة والاعتراضات ───
+
+function firstIssue(r: { success: false; error: { issues: { message: string }[] } }): ActionResult {
+  return { ok: false, error: r.error.issues[0]?.message ?? "بيانات غير صحيحة" };
+}
+
+export async function responseAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const id = str(form, "violationId");
+  const op = str(form, "op");
+  const rid = str(form, "responseId");
+  const f = strings(form);
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    if (op === "record") {
+      const b = responseBaseSchema.safeParse(f);
+      if (!b.success) return firstIssue(b);
+      const kind = str(form, "kind");
+      const schema = kind === "FINANCIAL" ? financialSchema : kind === "TECHNICAL" ? technicalResponseSchema : kind === "LEGAL" ? legalResponseSchema : null;
+      if (!schema) throw new AppError("نوع الاستجابة غير معروف");
+      const sp = schema.safeParse(f);
+      if (!sp.success) return firstIssue(sp);
+      await recordResponse(actor, id, b.data, { kind, data: sp.data } as Parameters<typeof recordResponse>[3], await files(form, "files"), ctx);
+    } else if (op === "payment") {
+      const p = paymentSchema.safeParse(f);
+      if (!p.success) return firstIssue(p);
+      await addPayment(actor, rid, p.data, ctx);
+    } else if (op === "financial") {
+      await updateFinancial(actor, rid, { amountDue: f.amountDue || null, amountDueBasis: f.amountDueBasis || null, auditResult: f.auditResult || null, reason: f.reason ?? "" }, ctx);
+    } else if (op === "verify") {
+      const p = technicalVerifySchema.safeParse(f);
+      if (!p.success) return firstIssue(p);
+      await verifyTechnicalResponse(actor, rid, p.data, ctx);
+    } else if (op === "opinion") {
+      const p = legalOpinionSchema.safeParse(f);
+      if (!p.success) return firstIssue(p);
+      await giveLegalOpinion(actor, rid, p.data, ctx);
+    } else if (op === "decide") {
+      const d = str(form, "decision");
+      if (!["ACCEPTED", "PARTIALLY_ACCEPTED", "REJECTED"].includes(d)) throw new AppError("قرار غير معروف");
+      await decideResponse(actor, rid, d as "ACCEPTED", f.notes || null, ctx);
+    } else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/violations/${id}`);
+  redirect(`/violations/${id}?done=response_${op}`);
+}
+
+export async function removalAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const id = str(form, "violationId");
+  const op = str(form, "op");
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    if (op === "record") {
+      const p = removalSchema.safeParse(strings(form));
+      if (!p.success) return firstIssue(p);
+      await recordRemoval(actor, id, p.data, await files(form, "files"), ctx);
+    } else if (op === "approve" || op === "reject") {
+      await decideRemoval(actor, str(form, "removalId"), op === "approve", str(form, "notes") || null, ctx);
+    } else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/violations/${id}`);
+  redirect(`/violations/${id}?done=removal_${op}`);
+}
+
+export async function objectionAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const id = str(form, "violationId");
+  const op = str(form, "op");
+  const oid = str(form, "objectionId");
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    if (op === "record") {
+      const p = objectionSchema.safeParse(strings(form));
+      if (!p.success) return firstIssue(p);
+      await recordObjection(actor, id, p.data, await files(form, "files"), ctx);
+    } else if (op === "suspend") await suspendForObjection(actor, oid, str(form, "reason"), ctx);
+    else if (op === "event") await addObjectionEvent(actor, oid, { eventAt: str(form, "eventAt"), description: str(form, "description") }, await files(form, "files"), ctx);
+    else if (op === "decide") {
+      const p = objectionDecisionSchema.safeParse(strings(form));
+      if (!p.success) return firstIssue(p);
+      await decideObjection(actor, oid, p.data, ctx);
+    } else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/violations/${id}`);
+  redirect(`/violations/${id}?done=objection_${op}`);
 }

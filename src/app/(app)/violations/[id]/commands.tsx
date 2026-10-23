@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { violationCommandAction } from "../actions";
-import { ConfirmButton, FormMessage } from "@/components/client-ui";
+import { ConfirmButton, FormMessage, NoResetForm } from "@/components/client-ui";
 
 const OPS: Record<string, { op: string; message: string }> = {
   register: { op: "register", message: "سيولّد النظام الرقم الرسمي للمخالفة. لا يمكن التراجع عن التسجيل الرسمي." },
@@ -18,15 +18,15 @@ export function ViolationCommands({ id, version, transitions, canArchive, hasRep
       <FormMessage state={state} />
       <div className="flex flex-wrap items-end gap-3">
         {transitions.filter((t) => OPS[t.action]).map((t) => (
-          <form key={t.action} action={action}>
+          <NoResetForm key={t.action} action={action}>
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="version" value={version} />
             <input type="hidden" name="op" value={OPS[t.action].op} />
             <ConfirmButton title={t.label} message={OPS[t.action].message}>{t.label}</ConfirmButton>
-          </form>
+          </NoResetForm>
         ))}
         {canArchive && (
-          <form action={action} className="flex flex-wrap items-end gap-2">
+          <NoResetForm action={action} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="version" value={version} />
             <input type="hidden" name="op" value="archive" />
@@ -35,7 +35,7 @@ export function ViolationCommands({ id, version, transitions, canArchive, hasRep
               <input name="reason" required className="field-input w-56" />
             </label>
             <ConfirmButton variant="danger" title="أرشفة المسودة" message="ستُخفى المسودة من القوائم مع بقائها محفوظة في قاعدة البيانات وسجل التدقيق.">أرشفة المسودة</ConfirmButton>
-          </form>
+          </NoResetForm>
         )}
       </div>
       {transitions.some((t) => t.action === "submit_for_approval") && !hasReport && (

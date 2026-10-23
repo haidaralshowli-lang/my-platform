@@ -9,6 +9,7 @@ import { LEGAL_DOC_STATUS_LABELS, LEGAL_REF_PURPOSE_LABELS } from "@/lib/documen
 import { violationLegalRefs, PURPOSE_PERMISSION } from "@/lib/services/legal-library";
 import { SYSTEM_ROLES } from "@/lib/rbac/catalog";
 import { DeliverySections } from "./delivery-panels";
+import { ResponseSections } from "./response-panels";
 import { AssessmentForm, DecisionForm, LinkArticleForm, PrepareWarningForm, SignedWarningForm, UnlinkRefForm } from "./workflow-forms";
 
 const APPROVAL_KIND_LABELS: Record<string, string> = {
@@ -230,6 +231,7 @@ export async function WorkflowSections({ actor, v }: { actor: Actor; v: Violatio
       )}
 
       <DeliverySections actor={actor} v={v} />
+      <ResponseSections actor={actor} v={v} />
 
       {approvals.length > 0 && (
         <Card title="سجل القرارات والمصادقات">

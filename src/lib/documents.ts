@@ -29,6 +29,11 @@ export const SYSTEM_DOC_TYPES = {
   LEGAL_DOCUMENT: "ملف وثيقة مرجعية",
   RECEIPT: "وصل الاستلام (نسخة ضوئية)",
   EXTENSION_REQUEST: "مستند طلب التمديد",
+  RESPONSE_FINANCIAL: "مرفق استجابة مالية",
+  RESPONSE_TECHNICAL: "دليل استجابة فنية",
+  RESPONSE_LEGAL: "مرفق استجابة قانونية",
+  REMOVAL_EVIDENCE: "دليل إزالة المخالفة",
+  OBJECTION_DOC: "مستند اعتراض أو طعن",
 } as const;
 
 export function docTypeLabel(code: string): string {

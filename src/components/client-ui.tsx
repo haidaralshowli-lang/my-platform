@@ -1,8 +1,43 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { createContext, useContext, useRef, useTransition, type FormHTMLAttributes, type ReactNode, type Ref } from "react";
 import { useFormStatus } from "react-dom";
 import { buttonClass, cn, type ButtonVariant } from "./ui";
+
+const PendingCtx = createContext(false);
+
+/// نموذج لا تُفرَّغ حقوله بعد الإرسال (React 19 يفرّغ نماذج action تلقائياً حتى عند ظهور خطأ تحقق،
+/// فيفقد المستخدم ما أدخله). يُرسل عبر onSubmit داخل transition مع إبقاء حالة «جارٍ التنفيذ» للأزرار.
+export function NoResetForm({ action, children, ref, ...rest }: {
+  action: (fd: FormData) => void;
+  children: ReactNode;
+  ref?: Ref<HTMLFormElement>;
+} & Omit<FormHTMLAttributes<HTMLFormElement>, "action" | "onSubmit" | "children">) {
+  const [pending, start] = useTransition();
+  return (
+    <PendingCtx.Provider value={pending}>
+      <form
+        ref={ref}
+        {...rest}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (pending) return;
+          const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+          const fd = new FormData(e.currentTarget, submitter);
+          start(() => action(fd));
+        }}
+      >
+        {children}
+      </form>
+    </PendingCtx.Provider>
+  );
+}
+
+function usePending() {
+  const { pending } = useFormStatus();
+  const ctxPending = useContext(PendingCtx);
+  return pending || ctxPending;
+}
 
 /// زر إرسال يُعطَّل أثناء المعالجة لمنع الإرسال المزدوج
 export function SubmitButton({ children, variant = "primary", pendingText = "جارٍ التنفيذ…", className, name, value }: {
@@ -13,7 +48,7 @@ export function SubmitButton({ children, variant = "primary", pendingText = "ج�
   name?: string;
   value?: string;
 }) {
-  const { pending } = useFormStatus();
+  const pending = usePending();
   return (
     <button type="submit" name={name} value={value} disabled={pending} aria-busy={pending} className={cn(buttonClass(variant), className)}>
       {pending ? pendingText : children}
@@ -32,7 +67,7 @@ export function ConfirmButton({ children, title, message, confirmText = "تأك�
   value?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const { pending } = useFormStatus();
+  const pending = usePending();
   return (
     <>
       <button type="button" disabled={pending} className={buttonClass(variant)} onClick={() => ref.current?.showModal()}>

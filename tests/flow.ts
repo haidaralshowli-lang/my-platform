@@ -44,3 +44,28 @@ export async function toAwaitingDelivery(c: Cast, overrides: Record<string, unkn
   await uploadSignedWarning(c.delivery, warningId, { name: "s.pdf", data: SAMPLE_PDF }, signedSchema.parse({ signerName: "رئيس الهيئة", signedAt: new Date().toISOString().slice(0, 10) }));
   return { id: d.id, warningId };
 }
+
+import { recordDispatch, recordReceipt, receiptSchema } from "@/lib/services/deliveries";
+
+/// قاعدة مدة عامة للاختبار (تُنشأ مرة واحدة)
+export async function ensureGeneralRule(c: Cast, objectionEffect: "NONE" | "SUSPEND" | "MANUAL_DECISION" = "MANUAL_DECISION", code = "T-GEN-RESP") {
+  const existing = await prisma.legalDeadlineRule.findUnique({ where: { code } });
+  if (existing) return existing;
+  const vt = await prisma.violationType.create({ data: { code: `VT-${code}`, nameAr: `نوع ${code}` } });
+  return prisma.legalDeadlineRule.create({
+    data: {
+      code, nameAr: `قاعدة ${code}`, violationTypeId: vt.id, duration: 10, unit: "CALENDAR_DAYS", startEvent: "RECEIPT_DATE", excludeHolidays: false,
+      legalBasis: "سند اختبار", extensionAllowed: true, maxExtensionDays: 30, objectionEffect, warnBeforeDays: 2, effectiveFrom: new Date("2020-01-01"), createdById: c.admin.id,
+    },
+  });
+}
+
+/// يوصل المعاملة إلى «المدة القانونية سارية» (استلام اليوم) باستخدام قاعدة محددة
+export async function toRunning(c: Cast, ruleCode = "T-GEN-RESP", objectionEffect: "NONE" | "SUSPEND" | "MANUAL_DECISION" = "MANUAL_DECISION") {
+  const rule = await ensureGeneralRule(c, objectionEffect, ruleCode);
+  const { id, warningId } = await toAwaitingDelivery(c, { violationTypeId: rule.violationTypeId });
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Baghdad" }).format(new Date());
+  const deliveryId = await recordDispatch(c.delivery, warningId, { sentAt: today, method: "HAND", notes: null });
+  await recordReceipt(c.delivery, deliveryId, receiptSchema.parse({ receivedDate: today, recipientName: "مستلم الاختبار", receiptNumber: `R${Date.now()}${Math.random()}` }), { name: "r.pdf", data: SAMPLE_PDF });
+  return { id, warningId };
+}

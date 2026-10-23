@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Field } from "@/components/ui";
-import { FormMessage, SubmitButton } from "@/components/client-ui";
+import { FormMessage, SubmitButton, NoResetForm } from "@/components/client-ui";
 import type { ActionResult } from "@/lib/errors";
 
 type Opt = { id: string; nameAr: string };
@@ -25,7 +25,7 @@ export function UserForm({ action, initial, governorates, offices, roles, submit
   const fe = state && !state.ok ? state.fieldErrors : undefined;
   const created = state?.ok && state.data?.tempPassword ? state.data : null;
   return (
-    <form action={formAction} className="grid gap-4 sm:grid-cols-2">
+    <NoResetForm action={formAction} className="grid gap-4 sm:grid-cols-2">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
       <div className="sm:col-span-2"><FormMessage state={state} /></div>
       {created && (
@@ -79,6 +79,6 @@ export function UserForm({ action, initial, governorates, offices, roles, submit
         </div>
       </fieldset>
       <div className="sm:col-span-2"><SubmitButton>{submitLabel}</SubmitButton></div>
-    </form>
+    </NoResetForm>
   );
 }

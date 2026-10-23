@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { attachmentCommandAction, uploadAttachmentsAction } from "../actions";
 import { Field } from "@/components/ui";
-import { ConfirmButton, FormMessage, SubmitButton } from "@/components/client-ui";
+import { ConfirmButton, FormMessage, SubmitButton, NoResetForm } from "@/components/client-ui";
 
 export function UploadForm({ violationId, accept, docTypes, supplementary, canConfidential, defaultType }: {
   violationId: string; accept: string; docTypes: Record<string, string>; supplementary: boolean; canConfidential: boolean; defaultType: string;
@@ -14,7 +14,7 @@ export function UploadForm({ violationId, accept, docTypes, supplementary, canCo
     if (state?.ok) ref.current?.reset();
   }, [state]);
   return (
-    <form ref={ref} action={action} className="grid gap-3 sm:grid-cols-2">
+    <NoResetForm ref={ref} action={action} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="violationId" value={violationId} />
       <h3 className="text-sm font-semibold text-brand sm:col-span-2">رفع مستندات</h3>
       <div className="sm:col-span-2"><FormMessage state={state} /></div>
@@ -46,7 +46,7 @@ export function UploadForm({ violationId, accept, docTypes, supplementary, canCo
         </Field>
       )}
       <div className="sm:col-span-2"><SubmitButton pendingText="جارٍ الرفع والتحقق…">رفع</SubmitButton></div>
-    </form>
+    </NoResetForm>
   );
 }
 
@@ -59,7 +59,7 @@ export function AttachmentRowActions({ violationId, attachmentId, approved, acce
       <summary className="cursor-pointer text-xs text-brand">إجراءات المستند</summary>
       <div className="mt-2 flex flex-col gap-3 rounded-md bg-band p-3">
         <FormMessage state={state} />
-        <form action={action} className="flex flex-col gap-2">
+        <NoResetForm action={action} className="flex flex-col gap-2">
           <input type="hidden" name="violationId" value={violationId} />
           <input type="hidden" name="attachmentId" value={attachmentId} />
           <input type="hidden" name="op" value="version" />
@@ -67,9 +67,9 @@ export function AttachmentRowActions({ violationId, attachmentId, approved, acce
           <input name="file" type="file" accept={accept} required className="field-input" aria-label="ملف الإصدار الجديد" />
           <input name="reason" required placeholder="سبب الإصدار الجديد" className="field-input" aria-label="سبب الإصدار الجديد" />
           <div><SubmitButton variant="secondary" pendingText="جارٍ الرفع…">رفع الإصدار</SubmitButton></div>
-        </form>
+        </NoResetForm>
         {canWithdraw && (
-          <form action={action} className="flex flex-col gap-2">
+          <NoResetForm action={action} className="flex flex-col gap-2">
             <input type="hidden" name="violationId" value={violationId} />
             <input type="hidden" name="attachmentId" value={attachmentId} />
             <input type="hidden" name="op" value="withdraw" />
@@ -77,7 +77,7 @@ export function AttachmentRowActions({ violationId, attachmentId, approved, acce
             <div>
               <ConfirmButton variant="danger" title="سحب المستند" message="يُعلَّم المستند مسحوباً ويبقى محفوظاً بكل إصداراته. لا يُحذف فعلياً.">سحب المستند</ConfirmButton>
             </div>
-          </form>
+          </NoResetForm>
         )}
       </div>
     </details>

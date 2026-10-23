@@ -167,3 +167,33 @@ defineTransition("deadline_reopened", { labelAr: "عودة سريان المدة
 defineTransition("extension_requested", { labelAr: "تسجيل طلب تمديد", from: ["DEADLINE_RUNNING", "DEADLINE_EXPIRED"], to: "EXTENSION_UNDER_REVIEW", permission: null });
 defineTransition("extension_decided_running", { labelAr: "قرار طلب التمديد (المدة سارية)", from: ["EXTENSION_UNDER_REVIEW"], to: "DEADLINE_RUNNING", permission: null });
 defineTransition("extension_decided_expired", { labelAr: "قرار طلب التمديد (المدة منتهية)", from: ["EXTENSION_UNDER_REVIEW"], to: "DEADLINE_EXPIRED", permission: null });
+
+// ─── المرحلة التاسعة: الاستجابات والإزالة والاعتراضات (تُطلق من خدماتها بعد التحقق من الصلاحية) ───
+
+const RESPONSE_STAGES = ["DEADLINE_RUNNING", "DEADLINE_EXPIRED", "AWAITING_RESPONSE_RECORD"] as const;
+
+defineTransition("response_recorded", { labelAr: "تسجيل استجابة", from: [...RESPONSE_STAGES, "AWAITING_RESPONSE_VERIFICATION"], to: "AWAITING_RESPONSE_VERIFICATION", permission: null });
+/// قبول الاستجابة: لا يُغلق الملف؛ ينتقل للتحقق النهائي والإغلاق بإجراء مستقل
+defineTransition("response_accepted", { labelAr: "قبول الاستجابة", from: ["AWAITING_RESPONSE_VERIFICATION"], to: "AWAITING_FINAL_VERIFICATION", permission: null });
+const RESUME_TARGETS = ["DEADLINE_RUNNING", "DEADLINE_EXPIRED"] as const;
+defineTransition("response_insufficient", {
+  labelAr: "عدم كفاية الاستجابة", from: ["AWAITING_RESPONSE_VERIFICATION"], permission: null,
+  to: (_v, t) => {
+    if (!t || !(RESUME_TARGETS as readonly string[]).includes(t)) throw new Error("مرحلة هدف غير مسموحة");
+    return t;
+  },
+});
+defineTransition("removal_approved", {
+  labelAr: "اعتماد إزالة المخالفة بالكامل", from: ["AWAITING_RESPONSE_VERIFICATION", "AWAITING_FINAL_VERIFICATION"], to: "AWAITING_FINAL_VERIFICATION", permission: null, outcome: "FULL_REMOVAL",
+});
+
+export const OBJECTION_FROM = ["AWAITING_DELIVERY", "AWAITING_RECEIPT_PROOF", "DEADLINE_RUNNING", "DEADLINE_EXPIRED", "AWAITING_RESPONSE_VERIFICATION", "AWAITING_FINAL_VERIFICATION"] as const;
+defineTransition("objection_filed", { labelAr: "تقديم اعتراض أو طعن", from: [...OBJECTION_FROM], to: "OBJECTION_UNDER_REVIEW", permission: null });
+defineTransition("objection_continue", {
+  labelAr: "استمرار سير المعاملة بعد قرار الاعتراض", from: ["OBJECTION_UNDER_REVIEW"], permission: null,
+  to: (_v, t) => {
+    if (!t || !(OBJECTION_FROM as readonly string[]).includes(t)) throw new Error("مرحلة هدف غير مسموحة");
+    return t;
+  },
+});
+defineTransition("objection_ends_file", { labelAr: "قبول الاعتراض وإنهاء المسار", from: ["OBJECTION_UNDER_REVIEW"], to: "AWAITING_FINAL_VERIFICATION", permission: null, outcome: "OBJECTION_APPEAL" });
