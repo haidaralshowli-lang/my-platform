@@ -12,7 +12,7 @@ export type NavItem = {
 };
 
 /// رقم آخر جزء مكتمل من خطة التنفيذ
-export const IMPLEMENTED_PART = 7;
+export const IMPLEMENTED_PART = 8;
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "لوحة المعلومات", anyOf: ["dashboard.view"], icon: "LayoutDashboard", part: 1 },
