@@ -49,11 +49,13 @@ body {
   outline-offset: 2px;
 }
 
-/* حقول النماذج */
-.field-input {
-  @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-xs transition
-    placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none
-    disabled:bg-band disabled:text-muted;
+/* حقول النماذج: داخل طبقة components حتى تتغلب عليها أصناف العرض المساعدة (w-56، max-w-xs…) */
+@layer components {
+  .field-input {
+    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink shadow-xs transition
+      placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none
+      disabled:bg-band disabled:text-muted;
+  }
 }
 
 /* الأرقام والرموز اللاتينية داخل النص العربي */

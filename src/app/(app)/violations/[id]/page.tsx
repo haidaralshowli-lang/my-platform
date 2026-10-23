@@ -13,6 +13,7 @@ import { ATTACHMENT_STATUS_LABELS, CONFIDENTIALITY_LABELS, docTypeLabel, VIOLATI
 import { ACCEPT_ATTR } from "@/lib/storage/file-check";
 import { ViolationCommands } from "./commands";
 import { AttachmentRowActions, UploadForm } from "./attachments-ui";
+import { WorkflowSections } from "./workflow-panels";
 
 export const metadata = { title: "ملف المخالفة" };
 
@@ -28,6 +29,13 @@ function Item({ label, children }: { label: string; children: React.ReactNode })
 const DONE_MESSAGES: Record<string, string> = {
   register: "تم تسجيل المخالفة رسمياً وتوليد رقمها.",
   submit: "تمت إحالة المخالفة للمصادقة النهائية.",
+  decision: "تم تسجيل القرار.",
+  technical: "اعتُمد الموقف الفني وأُحيلت المعاملة إلى الدائرة القانونية.",
+  technical_submitted: "قُدِّم الموقف الفني للمراجعة الفنية.",
+  legal_submitted: "قُدِّم الرأي القانوني للمصادقة.",
+  warning_prepare: "أُعد الإنذار وهو بانتظار التوقيع اليدوي.",
+  warning_cancel: "أُلغي الإنذار المعد ويمكن إعداده مجدداً.",
+  warning_signed: "رُفعت النسخة الموقعة وانتقلت المعاملة إلى مرحلة التبليغ.",
 };
 
 const sizeLabel = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} م.ب` : `${Math.max(1, Math.round(n / 1024))} ك.ب`);
@@ -133,6 +141,8 @@ export default async function ViolationPage({ params, searchParams }: { params: 
               </div>
             )}
           </Card>
+
+          {v.stage !== "DRAFT" && <WorkflowSections actor={actor} v={v} />}
 
           <Card title={`المحضر والمرفقات (${attachments.length})`}>
             {attachments.length === 0 ? (

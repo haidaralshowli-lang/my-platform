@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Attachment, AttachmentVersion, Confidentiality } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma, type Tx } from "@/lib/db";
 import { AppError, forbidden, notFound } from "@/lib/errors";
 import { writeAudit, type AuditContext } from "@/lib/audit";
 import { assertCan, can, inScope, type Actor } from "@/lib/rbac/actor";
@@ -46,22 +46,98 @@ async function validateAll(files: IncomingFile[]) {
   return checked;
 }
 
-async function storeChecked(data: Buffer, mime: string, actor: Actor, ctx?: AuditContext) {
+async function storeChecked(data: Buffer, mime: string, actor: Actor, ctx?: AuditContext, prefix = "violations") {
   const scan = await scanForMalware(data);
   if (scan === "INFECTED") {
     await prisma.$transaction((tx) => writeAudit(tx, { actor, action: "attachment.rejected_malware", entityType: "Attachment", ctx }));
     throw new AppError("رُفض الملف لاحتوائه على برمجية خبيثة");
   }
-  const key = newStorageKey("violations");
+  const key = newStorageKey(prefix);
   await storage().put(key, data, mime);
   return { key, scan };
+}
+
+export type StoredFile = { file: IncomingFile; info: Awaited<ReturnType<typeof checkFile>>; key: string; scan: "CLEAN" | "NOT_SCANNED" | "PENDING" };
+
+/// يتحقق من الملفات ويخزنها (قبل معاملة قاعدة البيانات)
+export async function prepareFiles(files: IncomingFile[], actor: Actor, ctx?: AuditContext, prefix = "violations"): Promise<StoredFile[]> {
+  if (files.length === 0) throw new AppError("يرجى اختيار ملف واحد على الأقل");
+  if (files.length > MAX_FILES_PER_UPLOAD) throw new AppError(`الحد الأقصى ${MAX_FILES_PER_UPLOAD} ملفاً في المرة الواحدة`);
+  const checked = await validateAll(files);
+  const out: StoredFile[] = [];
+  for (const c of checked) {
+    const { key, scan } = await storeChecked(c.file.data, c.info.mimeType, actor, ctx, prefix);
+    out.push({ ...c, key, scan: scan as StoredFile["scan"] });
+  }
+  return out;
+}
+
+export type AttachmentBase = {
+  violationId: string | null;
+  ownerType: string;
+  ownerId: string;
+  documentType: string;
+  description?: string | null;
+  letterNumber?: string | null;
+  letterDate?: Date | null;
+  confidentiality?: Confidentiality;
+  additionReason?: string | null;
+  approvalStatus: "DRAFT" | "APPROVED";
+};
+
+/// ينشئ سجلات المرفقات وإصدارها الأول داخل المعاملة ويكتب قيد التدقيق
+export async function insertAttachments(tx: Tx, actor: Actor, stored: StoredFile[], base: AttachmentBase, ctx?: AuditContext): Promise<string[]> {
+  const ids: string[] = [];
+  for (const s of stored) {
+    const a = await tx.attachment.create({
+      data: {
+        violationId: base.violationId,
+        ownerType: base.ownerType,
+        ownerId: base.ownerId,
+        documentType: base.documentType,
+        description: base.description ?? null,
+        letterNumber: base.letterNumber ?? null,
+        letterDate: base.letterDate ?? null,
+        confidentiality: base.confidentiality ?? "NORMAL",
+        approvalStatus: base.approvalStatus,
+        additionReason: base.additionReason ?? null,
+        createdById: actor.id,
+        versions: {
+          create: {
+            versionNo: 1,
+            originalName: safeDisplayName(s.file.name),
+            storageProvider: storage().provider,
+            storageKey: s.key,
+            mimeType: s.info.mimeType,
+            sizeBytes: s.info.sizeBytes,
+            sha256: s.info.sha256,
+            scanStatus: s.scan,
+            uploadedById: actor.id,
+          },
+        },
+      },
+    });
+    ids.push(a.id);
+    await writeAudit(tx, {
+      actor,
+      action: "attachment.uploaded",
+      entityType: "Attachment",
+      entityId: a.id,
+      after: {
+        violationId: base.violationId, ownerType: base.ownerType, ownerId: base.ownerId, documentType: base.documentType,
+        name: safeDisplayName(s.file.name), sha256: s.info.sha256, sizeBytes: s.info.sizeBytes, confidentiality: base.confidentiality ?? "NORMAL",
+      },
+      reason: base.additionReason ?? null,
+      ctx,
+    });
+  }
+  return ids;
 }
 
 /// رفع مرفقات لمخالفة. لا يُقبل إلا النوع الحقيقي المسموح، ويُحفظ المحتوى خارج المجلد العام بمفتاح يولده النظام.
 export async function uploadViolationAttachments(actor: Actor, violationId: string, files: IncomingFile[], meta: AttachmentMeta, ctx?: AuditContext): Promise<string[]> {
   assertCan(actor, "attachment.upload");
   if (files.length === 0) throw new AppError("يرجى اختيار ملف واحد على الأقل");
-  if (files.length > MAX_FILES_PER_UPLOAD) throw new AppError(`الحد الأقصى ${MAX_FILES_PER_UPLOAD} ملفاً في المرة الواحدة`);
   const v = await prisma.violation.findUnique({ where: { id: violationId } });
   if (!v || !inScope(actor, v)) throw notFound();
   if (v.generalStatus === "CLOSED") throw new AppError("لا تُضاف مرفقات إلى مخالفة مغلقة إلا بعد إعادة فتحها");
@@ -75,52 +151,11 @@ export async function uploadViolationAttachments(actor: Actor, violationId: stri
   const existing = await prisma.attachment.count({ where: { violationId } });
   if (existing + files.length > maxFiles) throw new AppError(`تجاوز الحد الأقصى لعدد المرفقات لهذه المخالفة (${maxFiles})`);
 
-  const checked = await validateAll(files);
-  const stored: (Awaited<ReturnType<typeof validateAll>>[number] & Awaited<ReturnType<typeof storeChecked>>)[] = [];
-  for (const c of checked) stored.push({ ...c, ...(await storeChecked(c.file.data, c.info.mimeType, actor, ctx)) });
-
+  const stored = await prepareFiles(files, actor, ctx);
   return prisma.$transaction(async (tx) => {
-    const ids: string[] = [];
-    for (const s of stored) {
-      const a = await tx.attachment.create({
-        data: {
-          violationId,
-          ownerType: "Violation",
-          ownerId: violationId,
-          documentType: meta.documentType,
-          description: meta.description,
-          letterNumber: meta.letterNumber,
-          letterDate: meta.letterDate,
-          confidentiality: meta.confidentiality,
-          approvalStatus: "DRAFT",
-          additionReason: meta.additionReason,
-          createdById: actor.id,
-          versions: {
-            create: {
-              versionNo: 1,
-              originalName: safeDisplayName(s.file.name),
-              storageProvider: storage().provider,
-              storageKey: s.key,
-              mimeType: s.info.mimeType,
-              sizeBytes: s.info.sizeBytes,
-              sha256: s.info.sha256,
-              scanStatus: s.scan,
-              uploadedById: actor.id,
-            },
-          },
-        },
-      });
-      ids.push(a.id);
-      await writeAudit(tx, {
-        actor,
-        action: "attachment.uploaded",
-        entityType: "Attachment",
-        entityId: a.id,
-        after: { violationId, documentType: meta.documentType, name: safeDisplayName(s.file.name), sha256: s.info.sha256, sizeBytes: s.info.sizeBytes, confidentiality: meta.confidentiality },
-        reason: meta.additionReason,
-        ctx,
-      });
-    }
+    const ids = await insertAttachments(tx, actor, stored, {
+      violationId, ownerType: "Violation", ownerId: violationId, ...meta, approvalStatus: "DRAFT",
+    }, ctx);
     if (meta.documentType === "VIOLATION_REPORT" && v.stage === "AWAITING_REPORT") {
       await applyTransition(tx, actor, violationId, "report_attached", { system: true, ctx });
     }
@@ -188,9 +223,15 @@ export async function readAttachmentVersion(actor: Actor, versionId: string, ctx
   const version = await prisma.attachmentVersion.findUnique({ where: { id: versionId }, include: { attachment: { include: { violation: true } } } });
   if (!version) throw notFound();
   const { attachment } = version;
-  // مرفقات المخالفات فقط في هذا الجزء؛ مرفقات المكتبة القانونية تُخدم بفحص صلاحياتها الخاصة
-  if (!attachment.violation || !inScope(actor, attachment.violation)) throw notFound();
-  if (attachment.violation.stage === "DRAFT" && attachment.violation.createdById !== actor.id && !can(actor, "violation.edit")) throw notFound();
+  if (attachment.violation) {
+    if (!inScope(actor, attachment.violation)) throw notFound();
+    if (attachment.violation.stage === "DRAFT" && attachment.violation.createdById !== actor.id && !can(actor, "violation.edit")) throw notFound();
+  } else if (attachment.ownerType === "LegalDocumentVersion") {
+    // ملفات المكتبة القانونية: مرجعية عامة داخل الهيئة لمن يملك صلاحية الاطلاع على المكتبة
+    if (!can(actor, "legal_library.view")) throw notFound();
+  } else {
+    throw notFound();
+  }
   if (!canSeeConfidentiality(actor, attachment.confidentiality)) throw notFound();
   if (version.scanStatus === "INFECTED") throw new AppError("الملف محجوب لاحتوائه على برمجية خبيثة");
   const data = await storage().get(version.storageKey);
