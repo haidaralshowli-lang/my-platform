@@ -4,8 +4,9 @@ out/
 .env
 .env.*
 !.env.example
-storage/
-backups/
+/storage/
+/backups/
+/storage-restored/
 *.log
 coverage/
 test-results/
