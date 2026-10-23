@@ -23,6 +23,20 @@ export const ATTACHMENT_STATUS_LABELS = {
   WITHDRAWN: "مسحوب",
 } as const;
 
+/// مستندات ملف الدعوى الجزائية
+export const CASE_DOC_TYPES = {
+  REFERRAL_LETTER: "كتاب الإحالة",
+  CASE_OFFICIAL_DOC: "مستند رسمي",
+  CASE_WARNING_COPY: "نسخة الإنذار",
+  CASE_RECEIPT_COPY: "وصل الاستلام",
+  CASE_TECH_EVIDENCE: "دليل فني",
+  CASE_INSPECTION: "محضر كشف",
+  CASE_CORRESPONDENCE: "كتاب متبادل",
+  COURT_DOC: "مستند قضائي",
+  JUDGMENT_COPY: "نسخة الحكم الصادر",
+  CASE_OTHER: "مستند لاحق ذو علاقة",
+} as const;
+
 /// أنواع تُنشئها مسارات النظام (لا تُختار يدوياً من نموذج الرفع العام)
 export const SYSTEM_DOC_TYPES = {
   SIGNED_WARNING: "الإنذار الموقع (نسخة ضوئية)",
@@ -37,7 +51,7 @@ export const SYSTEM_DOC_TYPES = {
 } as const;
 
 export function docTypeLabel(code: string): string {
-  return (VIOLATION_DOC_TYPES as Record<string, string>)[code] ?? (SYSTEM_DOC_TYPES as Record<string, string>)[code] ?? code;
+  return (VIOLATION_DOC_TYPES as Record<string, string>)[code] ?? (SYSTEM_DOC_TYPES as Record<string, string>)[code] ?? (CASE_DOC_TYPES as Record<string, string>)[code] ?? code;
 }
 
 export const LEGAL_DOC_TYPE_LABELS = {
@@ -64,3 +78,5 @@ export const LEGAL_REF_PURPOSE_LABELS = {
   LEGAL: "سند الرأي القانوني",
   WARNING: "سند الإنذار",
 } as const;
+
+export const CASE_STATUS_LABELS = { PREPARING: "قيد الإعداد", REFERRED: "محالة", IN_COURT: "قيد النظر", JUDGMENT_ISSUED: "صدر حكم", CLOSED: "مغلقة" } as const;

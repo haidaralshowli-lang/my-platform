@@ -56,6 +56,12 @@ const DONE_MESSAGES: Record<string, string> = {
   objection_suspend: "عُلِّقت المدة بقرار موثق.",
   objection_event: "أُضيف الإجراء إلى ملف الاعتراض.",
   objection_decide: "سُجِّل قرار الاعتراض.",
+  nonresponse_initiate: "بدأ إجراء عدم الاستجابة وهو بانتظار الاعتماد. لم يُفتح ملف دعوى بعد.",
+  nonresponse_return: "أُعيد إجراء عدم الاستجابة.",
+  closure_request: "قُدِّم طلب الإغلاق وهو بانتظار الاعتماد. لا تُعد المخالفة مغلقة قبل اعتماده.",
+  closure_approve: "اعتُمد إغلاق المخالفة.",
+  closure_reject: "رُفض طلب الإغلاق وعادت المعاملة للتحقق.",
+  closure_reopen: "أُعيد فتح المخالفة مع الاحتفاظ بسجل الإغلاق السابق.",
 };
 
 const sizeLabel = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} م.ب` : `${Math.max(1, Math.round(n / 1024))} ك.ب`);

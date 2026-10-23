@@ -38,7 +38,7 @@ export default async function ViolationsPage({ searchParams }: { searchParams: P
   return (
     <>
       <PageHeader
-        title="جميع المخالفات"
+        title={raw.status === "CLOSED" ? "الأرشيف والمخالفات المغلقة" : "جميع المخالفات"}
         description="تعرض النتائج المخالفات الواقعة ضمن نطاق صلاحياتك فقط."
         actions={
           <>

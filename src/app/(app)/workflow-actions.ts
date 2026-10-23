@@ -19,6 +19,11 @@ import {
   addPayment, decideRemoval, decideResponse, financialSchema, giveLegalOpinion, legalOpinionSchema, legalResponseSchema, paymentSchema, recordRemoval, recordResponse,
   removalSchema, responseBaseSchema, technicalResponseSchema, technicalVerifySchema, updateFinancial, verifyTechnicalResponse,
 } from "@/lib/services/responses";
+import {
+  addCaseEvent, approveJudgment, caseDocSchema, caseEventSchema, caseUpdateSchema, decideNonResponse, initiateNonResponse, judgmentSchema, recordJudgment, recordReferral,
+  updateCase, updateJudgmentStatus, uploadCaseDocuments,
+} from "@/lib/services/criminal";
+import { closureSchema, decideClosure, reopenViolation, requestClosure } from "@/lib/services/closure";
 import { addObjectionEvent, decideObjection, objectionDecisionSchema, objectionSchema, recordObjection, suspendForObjection } from "@/lib/services/objections";
 
 const str = (f: FormData, k: string) => (typeof f.get(k) === "string" ? (f.get(k) as string) : "");
@@ -384,4 +389,87 @@ export async function objectionAction(_p: ActionResult | null, form: FormData): 
   }
   revalidatePath(`/violations/${id}`);
   redirect(`/violations/${id}?done=objection_${op}`);
+}
+
+// ─── عدم الاستجابة والدعوى والإغلاق ───
+
+export async function nonResponseAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const id = str(form, "violationId");
+  const op = str(form, "op");
+  let caseId: string | null = null;
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    const version = Number(str(form, "version"));
+    if (op === "initiate") await initiateNonResponse(actor, id, str(form, "proof"), version, ctx);
+    else if (op === "approve" || op === "return") caseId = await decideNonResponse(actor, id, op === "approve", str(form, "notes") || null, version, ctx);
+    else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/violations/${id}`);
+  redirect(caseId ? `/criminal-cases/${caseId}?done=opened` : `/violations/${id}?done=nonresponse_${op}`);
+}
+
+export async function caseAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const caseId = str(form, "caseId");
+  const op = str(form, "op");
+  const f = strings(form);
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    if (op === "update") {
+      const p = caseUpdateSchema.safeParse(f);
+      if (!p.success) return firstIssue(p);
+      await updateCase(actor, caseId, p.data, ctx);
+    } else if (op === "referral") {
+      const [file] = await files(form, "file");
+      await recordReferral(actor, caseId, { referralAt: f.referralAt ?? "", letterNumber: f.letterNumber || null }, file, ctx);
+    } else if (op === "event") {
+      const p = caseEventSchema.safeParse(f);
+      if (!p.success) return firstIssue(p);
+      await addCaseEvent(actor, caseId, p.data, ctx);
+    } else if (op === "docs") {
+      const p = caseDocSchema.safeParse(f);
+      if (!p.success) return firstIssue(p);
+      await uploadCaseDocuments(actor, caseId, p.data, await files(form, "files"), ctx);
+    } else if (op === "judgment") {
+      const p = judgmentSchema.safeParse(f);
+      if (!p.success) return firstIssue(p);
+      const [file] = await files(form, "file");
+      await recordJudgment(actor, caseId, p.data, file, ctx);
+    } else if (op === "approve_judgment") {
+      await approveJudgment(actor, str(form, "judgmentId"), ctx);
+    } else if (op === "judgment_status") {
+      const st = str(form, "proceduralStatus");
+      if (!["UNKNOWN", "NOT_FINAL", "APPEALED", "FINAL"].includes(st)) throw new AppError("حالة غير معروفة");
+      await updateJudgmentStatus(actor, str(form, "judgmentId"), st as "FINAL", str(form, "note"), ctx);
+    } else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/criminal-cases/${caseId}`);
+  redirect(`/criminal-cases/${caseId}?done=${op}`);
+}
+
+export async function closureAction(_p: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const id = str(form, "violationId");
+  const op = str(form, "op");
+  try {
+    const actor = await actionActor();
+    const ctx = await requestContext();
+    if (op === "request") {
+      const p = closureSchema.safeParse({ ...strings(form), supportingAttachmentIds: form.getAll("supportingAttachmentIds").map(String) });
+      if (!p.success) return firstIssue(p);
+      await requestClosure(actor, id, p.data, ctx);
+    } else if (op === "approve" || op === "reject") {
+      await decideClosure(actor, str(form, "requestId"), op === "approve", str(form, "notes") || null, ctx);
+    } else if (op === "reopen") {
+      await reopenViolation(actor, id, str(form, "reason"), ctx);
+    } else throw new AppError("إجراء غير معروف");
+  } catch (e) {
+    return toActionError(e);
+  }
+  revalidatePath(`/violations/${id}`);
+  redirect(`/violations/${id}?done=closure_${op}`);
 }

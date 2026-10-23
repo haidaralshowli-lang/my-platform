@@ -197,3 +197,37 @@ defineTransition("objection_continue", {
   },
 });
 defineTransition("objection_ends_file", { labelAr: "قبول الاعتراض وإنهاء المسار", from: ["OBJECTION_UNDER_REVIEW"], to: "AWAITING_FINAL_VERIFICATION", permission: null, outcome: "OBJECTION_APPEAL" });
+
+// ─── عدم الاستجابة والدعوى الجزائية ───
+
+defineTransition("nonresponse_initiate", {
+  labelAr: "بدء إجراء عدم الاستجابة", from: ["DEADLINE_EXPIRED"], to: "AWAITING_NON_RESPONSE_APPROVAL", permission: "nonresponse.initiate", requiresReason: true,
+  guard: async (tx, v) => {
+    const d = await tx.deadlineCalculation.findFirst({ where: { violationId: v.id, isCurrent: true } });
+    if (!d || d.status !== "EXPIRED" || !d.dueDate || d.dueDate.getTime() > Date.now()) return "لا توجد مدة قانونية مثبتة منتهية";
+    const open = await tx.response.count({ where: { violationId: v.id, status: { in: ["RECORDED", "UNDER_VERIFICATION", "ACCEPTED"] } } });
+    if (open) return "توجد استجابة مسجلة لم يُبت فيها أو مقبولة؛ لا يجوز بدء إجراء عدم الاستجابة";
+    if (await tx.objection.count({ where: { violationId: v.id, status: "PENDING" } })) return "يوجد اعتراض قيد المراجعة";
+    if (await tx.extensionRequest.count({ where: { violationId: v.id, status: "PENDING" } })) return "يوجد طلب تمديد قيد المراجعة";
+    return null;
+  },
+});
+defineTransition("nonresponse_return", { labelAr: "إعادة إجراء عدم الاستجابة", from: ["AWAITING_NON_RESPONSE_APPROVAL"], to: "DEADLINE_EXPIRED", permission: "nonresponse.approve", requiresReason: true });
+/// الاعتماد يُطلق من خدمة الدعوى (تنشئ ملف الدعوى في المعاملة نفسها)
+defineTransition("nonresponse_approve", { labelAr: "اعتماد عدم الاستجابة وفتح ملف الدعوى الجزائية", from: ["AWAITING_NON_RESPONSE_APPROVAL"], to: "CRIMINAL_CASE", permission: "nonresponse.approve", outcome: "NON_RESPONSE_CRIMINAL" });
+defineTransition("case_referred", { labelAr: "تسجيل إحالة الدعوى", from: ["CRIMINAL_CASE"], to: "AWAITING_JUDGMENT", permission: null });
+defineTransition("judgment_approved", { labelAr: "اعتماد بيانات الحكم القضائي", from: ["AWAITING_JUDGMENT"], to: "AWAITING_FINAL_VERIFICATION", permission: null });
+defineTransition("judgment_reopened", { labelAr: "عودة الدعوى للمتابعة (طعن أو إجراء لاحق)", from: ["AWAITING_FINAL_VERIFICATION"], to: "AWAITING_JUDGMENT", permission: null });
+
+// ─── الإغلاق وإعادة الفتح (تُطلق من خدمة الإغلاق بعد فحص الاكتمال) ───
+
+defineTransition("closure_requested", { labelAr: "طلب إغلاق المخالفة", from: ["AWAITING_FINAL_VERIFICATION", "NOT_APPROVED"], to: "AWAITING_CLOSURE_APPROVAL", permission: null });
+defineTransition("closure_rejected", {
+  labelAr: "رفض طلب الإغلاق", from: ["AWAITING_CLOSURE_APPROVAL"], permission: null,
+  to: (_v, t) => {
+    if (t !== "AWAITING_FINAL_VERIFICATION" && t !== "NOT_APPROVED") throw new Error("مرحلة هدف غير مسموحة");
+    return t;
+  },
+});
+defineTransition("closure_approved", { labelAr: "اعتماد إغلاق المخالفة", from: ["AWAITING_CLOSURE_APPROVAL"], to: "CLOSED", permission: null, status: "CLOSED" });
+defineTransition("reopened", { labelAr: "إعادة فتح المخالفة", from: ["CLOSED"], to: "AWAITING_FINAL_VERIFICATION", permission: null, status: "OPEN" });
