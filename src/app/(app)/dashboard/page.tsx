@@ -17,7 +17,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 export default async function DashboardPage() {
   const actor = await requirePagePermission("dashboard.view");
-  const scope = { ...violationScopeWhere(actor), isDemo: false, stage: { not: "DRAFT" as const } };
+  const scope = { AND: [violationScopeWhere(actor), { isDemo: false, stage: { not: "DRAFT" as const } }] };
   const canSee = can(actor, "violation.view");
   const [total, open, closed] = canSee
     ? await Promise.all([

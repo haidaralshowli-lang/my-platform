@@ -24,6 +24,24 @@ export default async function setup() {
     });
     admins[project] = { username, password };
   }
-  writeFileSync("tests/e2e/.state.json", JSON.stringify({ admins, suffix }));
+  // موظف تسجيل في المقر العام، وموظف في مكتب آخر لاختبار النطاق
+  const reg = await prisma.role.findUniqueOrThrow({ where: { code: "REGISTRAR" } });
+  const bsr = await prisma.governorate.findUniqueOrThrow({ where: { code: "BSR" } });
+  const otherOffice = await prisma.office.upsert({ where: { code: "E2E-BSR" }, update: {}, create: { code: "E2E-BSR", nameAr: "مكتب اختبار البصرة", governorateId: bsr.id } });
+  const staff: Record<string, { username: string; password: string }> = {};
+  for (const [key, officeId, govId] of [["registrar", hq.id, hq.governorateId], ["outsider", otherOffice.id, bsr.id]] as const) {
+    for (const project of ["desktop", "mobile"]) {
+      const username = `e2e-${key}-${project}-${suffix}`;
+      await prisma.user.create({
+        data: {
+          username, fullName: `موظف ${key} ${project}`, passwordHash: await hashPassword(password), mustChangePassword: false,
+          isDemo: true, officeId, governorateId: govId, roles: { create: { roleId: reg.id } },
+        },
+      });
+      staff[`${key}-${project}`] = { username, password };
+    }
+  }
+  await prisma.violationType.upsert({ where: { code: "E2E" }, update: { isActive: true }, create: { code: "E2E", nameAr: "نوع مخالفة لاختبار الواجهة" } });
+  writeFileSync("tests/e2e/.state.json", JSON.stringify({ admins, staff, suffix }));
   await prisma.$disconnect();
 }

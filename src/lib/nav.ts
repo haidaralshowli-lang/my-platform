@@ -12,7 +12,7 @@ export type NavItem = {
 };
 
 /// رقم آخر جزء مكتمل من خطة التنفيذ
-export const IMPLEMENTED_PART = 1;
+export const IMPLEMENTED_PART = 2;
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "لوحة المعلومات", anyOf: ["dashboard.view"], icon: "LayoutDashboard", part: 1 },
@@ -36,7 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/reports", label: "التقارير والإحصائيات", anyOf: ["reports.view"], icon: "BarChart3", part: 7 },
   { href: "/audit", label: "سجل التدقيق", anyOf: ["audit.view"], icon: "ShieldCheck", part: 7 },
   { href: "/admin/users", label: "إدارة المستخدمين والصلاحيات", anyOf: ["users.manage", "roles.manage"], icon: "Users", part: 1 },
-  { href: "/admin/settings", label: "إعدادات النظام", anyOf: ["settings.manage", "reference.manage", "deadline.rules_manage"], icon: "Settings", part: 7 },
+  { href: "/admin/settings", label: "إعدادات النظام", anyOf: ["reference.manage"], icon: "Settings", part: 2 },
 ];
 
 export function visibleNav(actor: Actor): NavItem[] {
