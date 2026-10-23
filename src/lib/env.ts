@@ -6,7 +6,7 @@ const schema = z.object({
   APP_TIMEZONE: z.string().default("Asia/Baghdad"),
   SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(72).default(8),
   APP_SECRET: z.string().min(32, "APP_SECRET يجب أن يكون 32 حرفاً على الأقل"),
-  STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+  STORAGE_DRIVER: z.enum(["local", "s3", "db"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().default("./storage"),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().optional(),
