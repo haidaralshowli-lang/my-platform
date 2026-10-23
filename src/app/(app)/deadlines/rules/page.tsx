@@ -32,7 +32,7 @@ export default async function RulesPage() {
                   <td><div className="font-medium">{r.nameAr}</div><div className="text-xs text-muted">{r.legalBasis}</div></td>
                   <td className="text-xs">{r.violationType?.nameAr ?? "عامة (لكل الأنواع)"}</td>
                   <td className="text-xs">{r.duration} {r.unit === "WORKING_DAYS" ? "يوم عمل" : "يوماً تقويمياً"}، {r.startEvent === "RECEIPT_DATE" ? "من يوم الاستلام" : "من اليوم التالي"}{r.excludeHolidays && r.unit === "CALENDAR_DAYS" ? "، تمتد إذا صادف آخرها عطلة" : ""}، تنبيه قبل {r.warnBeforeDays} أيام</td>
-                  <td className="text-xs whitespace-nowrap">{formatDate(r.effectiveFrom, "latn", "UTC")} — {r.effectiveTo ? formatDate(r.effectiveTo, "latn", "UTC") : "مستمرة"}{!r.isActive && <Badge tone="danger">معطلة</Badge>}</td>
+                  <td className="text-xs whitespace-nowrap">{formatDate(r.effectiveFrom, undefined, "UTC")} — {r.effectiveTo ? formatDate(r.effectiveTo, undefined, "UTC") : "مستمرة"}{!r.isActive && <Badge tone="danger">معطلة</Badge>}</td>
                   <td className="text-xs">{r.extensionAllowed ? `مسموح${r.maxExtensionDays ? ` حتى ${r.maxExtensionDays} يوماً` : ""}` : "غير مسموح"}</td>
                   <td className="text-xs">{OBJ[r.objectionEffect]}</td>
                   <td className="text-xs">{r._count.calculations}</td>
@@ -84,7 +84,7 @@ export default async function RulesPage() {
         <ul className="flex flex-col divide-y divide-line text-sm">
           {holidays.map((h) => (
             <li key={h.id} className="flex items-center justify-between gap-2 py-2">
-              <span>{formatDate(h.date, "latn", "UTC")} — {h.nameAr}</span>
+              <span>{formatDate(h.date, undefined, "UTC")} — {h.nameAr}</span>
               <ActForm action={deadlineAdminAction} hidden={{ op: "remove_holiday", holidayId: h.id }} submit="حذف" variant="ghost" />
             </li>
           ))}

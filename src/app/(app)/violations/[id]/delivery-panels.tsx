@@ -120,7 +120,7 @@ export async function DeliverySections({ actor, v }: { actor: Actor; v: Violatio
                 <div><dt className="text-xs text-muted">القاعدة</dt><dd>{snap.rule.nameAr}</dd></div>
                 <div><dt className="text-xs text-muted">المدة</dt><dd>{snap.rule.duration} {UNIT[snap.rule.unit]}{snap.rule.unit === "CALENDAR_DAYS" && snap.rule.excludeHolidays ? " (تمتد إذا صادف آخرها عطلة)" : ""}</dd></div>
                 <div><dt className="text-xs text-muted">بدء الاحتساب</dt><dd>{START[snap.rule.startEvent]}</dd></div>
-                <div><dt className="text-xs text-muted">اليوم الأول</dt><dd>{formatDate(current.startDate, "latn", "UTC")}</dd></div>
+                <div><dt className="text-xs text-muted">اليوم الأول</dt><dd>{formatDate(current.startDate, undefined, "UTC")}</dd></div>
                 <div><dt className="text-xs text-muted">تاريخ الانتهاء الأصلي</dt><dd>{formatDateTime(current.originalDueDate)}</dd></div>
                 <div><dt className="text-xs text-muted">تاريخ الانتهاء الحالي</dt><dd className="font-semibold">{formatDateTime(current.dueDate)}</dd></div>
                 <div><dt className="text-xs text-muted">مجموع التمديد</dt><dd>{current.totalExtensionDays} يوماً</dd></div>
@@ -140,7 +140,7 @@ export async function DeliverySections({ actor, v }: { actor: Actor; v: Violatio
               <li key={e.id} className="flex flex-col gap-1 py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={e.status === "APPROVED" ? "success" : e.status === "REJECTED" ? "danger" : "warning"}>{REQ[e.status]}</Badge>
-                  <span>طلب {e.requestedDays} يوماً بتاريخ {formatDate(e.requestedAt, "latn", "UTC")}</span>
+                  <span>طلب {e.requestedDays} يوماً بتاريخ {formatDate(e.requestedAt, undefined, "UTC")}</span>
                   {e.grantedDays && <span>— مُنح {e.grantedDays} يوماً، الاستحقاق الجديد {formatDateTime(e.newDueDate)}</span>}
                 </div>
                 <p className="text-xs">الأسباب: {e.reasons}</p>

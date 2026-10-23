@@ -4,7 +4,7 @@ import { can } from "@/lib/rbac/actor";
 import { loadReferenceLists, REFERENCE_LISTS } from "@/lib/services/reference";
 import { ReferenceListEditor } from "./reference-ui";
 
-export const metadata = { title: "إعدادات النظام" };
+export const metadata = { title: "القوائم المرجعية" };
 
 export default async function SettingsPage() {
   const actor = await requirePagePermission("reference.manage");
@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader
-        title="إعدادات النظام"
+        title="القوائم المرجعية"
         actions={can(actor, "deadline.rules_manage") ? <LinkButton variant="secondary" href="/deadlines/rules">قواعد المدد القانونية والعطل</LinkButton> : undefined}
         description="القوائم المرجعية المستخدمة في النماذج. لا تُحذف العناصر لارتباط المعاملات بها؛ تُعطَّل فتختفي من النماذج الجديدة وتبقى ظاهرة في المعاملات السابقة. جميع التعديلات مسجلة في سجل التدقيق."
       />

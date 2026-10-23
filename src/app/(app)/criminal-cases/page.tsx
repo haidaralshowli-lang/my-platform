@@ -37,7 +37,7 @@ export default async function CasesPage() {
                     <td>{c.violation.offenderName}</td>
                     <td className="text-xs"><bdi>{c.courtCaseNumber ?? "—"}</bdi>{c.courtName && ` / ${c.courtName}`}</td>
                     <td><Badge tone={c.status === "CLOSED" ? "success" : "legal"}>{CASE_STATUS[c.status]}</Badge></td>
-                    <td className="text-xs">{formatDate(c.events[0]?.nextHearingAt, "latn", "UTC")}</td>
+                    <td className="text-xs">{formatDate(c.events[0]?.nextHearingAt, undefined, "UTC")}</td>
                     <td className="text-xs">{c.followUpOwner?.fullName ?? "—"}</td>
                   </tr>
                 ))}

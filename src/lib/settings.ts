@@ -5,12 +5,8 @@ export const DEFAULT_SETTINGS = {
   "numbering.violation": { pattern: "م-{YYYY}-{SEQ:6}" },
   "numbering.warning": { pattern: "إن-{YYYY}-{SEQ:5}" },
   "numbering.criminalCase": { pattern: "دج-{YYYY}-{SEQ:4}" },
-  "display.timezone": "Asia/Baghdad",
-  /// latn: أرقام لاتينية (0-9)، arab: أرقام عربية مشرقية (٠-٩)
-  "display.digits": "latn" as "latn" | "arab",
   "attachments.maxSizeMb": 25,
   "attachments.maxFilesPerViolation": 200,
-  "notifications.nearExpiryDays": 3,
   /// أيام نهاية الأسبوع لاحتساب أيام العمل: 0 = الأحد … 6 = السبت (العراق: الجمعة والسبت)
   "deadline.weekendDays": [5, 6] as number[],
   "auth.maxFailedLogins": 5,

@@ -27,7 +27,7 @@ export async function ResponseTable({ actor, where, title }: { actor: Actor; whe
                 <td><Link className="text-brand hover:underline" href={`/violations/${r.violation.id}`}><bdi>{r.violation.number}</bdi></Link></td>
                 <td>{r.violation.offenderName}</td>
                 <td className="text-xs">{KIND[r.kind]}</td>
-                <td className="text-xs">{formatDate(r.receivedAt, "latn", "UTC")}</td>
+                <td className="text-xs">{formatDate(r.receivedAt, undefined, "UTC")}</td>
                 <td><Badge tone={r.status === "ACCEPTED" ? "success" : r.status === "REJECTED" ? "danger" : "warning"}>{STATUS[r.status]}</Badge></td>
               </tr>
             ))}

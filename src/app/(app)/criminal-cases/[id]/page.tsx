@@ -58,10 +58,10 @@ export default async function CasePage({ params, searchParams }: { params: Promi
               <div><dt className="text-xs text-muted">رقم الإنذار وتاريخه</dt><dd><bdi>{warning?.number ?? "—"}</bdi> {formatDate(warning?.preparedAt)}</dd></div>
               <div><dt className="text-xs text-muted">تاريخ استلام الإنذار</dt><dd>{formatDateTime(delivery?.receivedAt)}</dd></div>
               <div><dt className="text-xs text-muted">انتهاء المدة القانونية</dt><dd>{formatDateTime(deadline?.dueDate)}</dd></div>
-              <div><dt className="text-xs text-muted">تاريخ الإحالة</dt><dd>{formatDate(c.referralAt, "latn", "UTC")}</dd></div>
+              <div><dt className="text-xs text-muted">تاريخ الإحالة</dt><dd>{formatDate(c.referralAt, undefined, "UTC")}</dd></div>
               <div><dt className="text-xs text-muted">رقم الدعوى القضائية</dt><dd><bdi>{c.courtCaseNumber ?? "—"}</bdi></dd></div>
               <div><dt className="text-xs text-muted">المحكمة</dt><dd>{c.courtName ?? "—"}</dd></div>
-              <div><dt className="text-xs text-muted">تاريخ تسجيل الدعوى</dt><dd>{formatDate(c.courtRegisteredAt, "latn", "UTC")}</dd></div>
+              <div><dt className="text-xs text-muted">تاريخ تسجيل الدعوى</dt><dd>{formatDate(c.courtRegisteredAt, undefined, "UTC")}</dd></div>
               <div><dt className="text-xs text-muted">المسؤول عن المتابعة</dt><dd>{c.followUpOwner?.fullName ?? "—"}</dd></div>
               <div><dt className="text-xs text-muted">آخر إجراء</dt><dd>{c.lastAction ?? "—"}</dd></div>
               <div className="sm:col-span-3"><dt className="text-xs text-muted">إثبات عدم الاستجابة</dt><dd>{c.nonResponseProof}</dd></div>
@@ -100,9 +100,9 @@ export default async function CasePage({ params, searchParams }: { params: Promi
               <ol className="flex flex-col gap-3 border-s-2 border-line ps-4">
                 {c.events.map((e) => (
                   <li key={e.id} className="text-sm">
-                    <div className="font-medium">{e.eventType} — {formatDate(e.eventAt, "latn", "UTC")}</div>
+                    <div className="font-medium">{e.eventType} — {formatDate(e.eventAt, undefined, "UTC")}</div>
                     <p>{e.description}</p>
-                    {e.nextHearingAt && <p className="text-xs text-muted">الجلسة القادمة: {formatDate(e.nextHearingAt, "latn", "UTC")}</p>}
+                    {e.nextHearingAt && <p className="text-xs text-muted">الجلسة القادمة: {formatDate(e.nextHearingAt, undefined, "UTC")}</p>}
                   </li>
                 ))}
               </ol>
@@ -124,7 +124,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
                   <li key={j.id} className="flex flex-col gap-1 py-3 text-sm">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold">الحكم <bdi>{j.number}</bdi></span>
-                      <span>{formatDate(j.judgmentDate, "latn", "UTC")} — {j.courtName}</span>
+                      <span>{formatDate(j.judgmentDate, undefined, "UTC")} — {j.courtName}</span>
                       <Badge tone={j.proceduralStatus === "FINAL" ? "success" : "warning"}>{PROC[j.proceduralStatus]}</Badge>
                       {j.approvedById ? <Badge tone="success">معتمد</Badge> : <Badge tone="warning">بانتظار الاعتماد</Badge>}
                       {j.resultType && <Badge tone="legal">{j.resultType.nameAr}</Badge>}
@@ -132,7 +132,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
                     <p>{j.summary}</p>
                     {j.appealNote && <p className="text-xs">الطعن أو الإجراء اللاحق: {j.appealNote}</p>}
                     {j.legalNotes && <p className="text-xs">ملاحظات الدائرة القانونية: {j.legalNotes}</p>}
-                    <p className="text-xs text-muted">استلام النسخة: {formatDate(j.copyReceivedAt, "latn", "UTC")} — أدخله في {formatDateTime(j.createdAt)}{j.approvedAt && ` — اعتُمد في ${formatDateTime(j.approvedAt)}`}</p>
+                    <p className="text-xs text-muted">استلام النسخة: {formatDate(j.copyReceivedAt, undefined, "UTC")} — أدخله في {formatDateTime(j.createdAt)}{j.approvedAt && ` — اعتُمد في ${formatDateTime(j.approvedAt)}`}</p>
                     {!j.approvedById && can(actor, "judgment.approve") && j.enteredById !== actor.id && (
                       <ActForm action={caseAction} hidden={{ caseId: c.id, op: "approve_judgment", judgmentId: j.id }} submit="اعتماد بيانات الحكم" variant="secondary"
                         confirm={{ title: "اعتماد بيانات الحكم", message: "ينتقل الملف إلى التحقق النهائي. الإغلاق بمسار الدعوى يتطلب حكماً مكتسب الدرجة القطعية." }} />
@@ -187,7 +187,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
             <ul className="flex flex-col gap-2 text-sm">
               {caseDocs.map((a) => (
                 <li key={a.id}>
-                  <span className="font-medium">{docTypeLabel(a.documentType)}</span>{a.letterNumber && <> — <bdi>{a.letterNumber}</bdi></>}{a.letterDate && ` — ${formatDate(a.letterDate, "latn", "UTC")}`}
+                  <span className="font-medium">{docTypeLabel(a.documentType)}</span>{a.letterNumber && <> — <bdi>{a.letterNumber}</bdi></>}{a.letterDate && ` — ${formatDate(a.letterDate, undefined, "UTC")}`}
                   <div className="text-xs">{fileLink(a)} — {formatDateTime(a.createdAt)}{a.versions.length > 1 && ` — ${a.versions.length} إصدارات`}</div>
                 </li>
               ))}

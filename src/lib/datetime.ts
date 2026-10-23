@@ -43,7 +43,10 @@ export function zonedDateTimeToUtc(dateKey: string, time = "00:00", tz = DEFAULT
 
 export type DigitStyle = "latn" | "arab";
 
-export function formatDate(d: Date | string | null | undefined, digits: DigitStyle = "latn", tz = DEFAULT_TZ): string {
+/// نمط الأرقام الموحد للعرض: APP_DIGITS=latn (0-9، افتراضي) أو arab (٠-٩)
+export const DEFAULT_DIGITS: DigitStyle = process.env.APP_DIGITS === "arab" ? "arab" : "latn";
+
+export function formatDate(d: Date | string | null | undefined, digits: DigitStyle = DEFAULT_DIGITS, tz = DEFAULT_TZ): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
   return new Intl.DateTimeFormat(`ar-IQ-u-nu-${digits}`, {
@@ -54,7 +57,7 @@ export function formatDate(d: Date | string | null | undefined, digits: DigitSty
   }).format(date);
 }
 
-export function formatDateTime(d: Date | string | null | undefined, digits: DigitStyle = "latn", tz = DEFAULT_TZ): string {
+export function formatDateTime(d: Date | string | null | undefined, digits: DigitStyle = DEFAULT_DIGITS, tz = DEFAULT_TZ): string {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
   return new Intl.DateTimeFormat(`ar-IQ-u-nu-${digits}`, {
@@ -68,6 +71,6 @@ export function formatDateTime(d: Date | string | null | undefined, digits: Digi
   }).format(date);
 }
 
-export function formatNumberLocale(n: number | string, digits: DigitStyle = "latn"): string {
+export function formatNumberLocale(n: number | string, digits: DigitStyle = DEFAULT_DIGITS): string {
   return new Intl.NumberFormat(`ar-IQ-u-nu-${digits}`).format(typeof n === "string" ? Number(n) : n);
 }

@@ -255,7 +255,7 @@ export async function decideExtension(actor: Actor, requestId: string, approve: 
 // ─── المهمة المجدولة ───
 
 /// المرحلة → الصلاحية المسؤولة عن الإجراء التالي (لتنبيهات التأخر عن المدة الإدارية)
-const STAGE_OWNER: Partial<Record<Violation["stage"], Parameters<typeof recipientsFor>[2]>> = {
+export const STAGE_OWNER: Partial<Record<Violation["stage"], Parameters<typeof recipientsFor>[2]>> = {
   AWAITING_REPORT: ["violation.submit"],
   REGISTERED: ["violation.submit"],
   AWAITING_FINAL_APPROVAL: ["approval.final_registration"],

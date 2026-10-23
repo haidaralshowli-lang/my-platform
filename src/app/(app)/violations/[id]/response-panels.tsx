@@ -45,7 +45,7 @@ export async function ResponseSections({ actor, v }: { actor: Actor; v: Violatio
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">{KIND[r.kind]}</span>
                     <Badge tone={STATUS_TONE[r.status]}>{STATUS[r.status]}</Badge>
-                    <span className="text-xs text-muted">وردت {formatDate(r.receivedAt, "latn", "UTC")}{r.letterNumber && ` — كتاب ${r.letterNumber}`}{r.letterDate && ` في ${formatDate(r.letterDate, "latn", "UTC")}`}</span>
+                    <span className="text-xs text-muted">وردت {formatDate(r.receivedAt, undefined, "UTC")}{r.letterNumber && ` — كتاب ${r.letterNumber}`}{r.letterDate && ` في ${formatDate(r.letterDate, undefined, "UTC")}`}</span>
                   </div>
                   <p className="leading-7">{r.summary}</p>
                   {r.decisionNotes && <p className="text-xs">القرار: {r.decisionNotes} — {formatDateTime(r.decidedAt)}</p>}
@@ -65,7 +65,7 @@ export async function ResponseSections({ actor, v }: { actor: Actor; v: Violatio
                       {r.financial.payments.length > 0 && (
                         <ul className="mt-2 text-xs">
                           {r.financial.payments.map((p) => (
-                            <li key={p.id}>{p.amount.isNegative() ? "قيد عكسي" : "تسديد"} {money(p.amount)} في {formatDate(p.paidAt, "latn", "UTC")} — وصل <bdi>{p.receiptNumber}</bdi>{p.overpaymentReason && ` — ${p.overpaymentReason}`}</li>
+                            <li key={p.id}>{p.amount.isNegative() ? "قيد عكسي" : "تسديد"} {money(p.amount)} في {formatDate(p.paidAt, undefined, "UTC")} — وصل <bdi>{p.receiptNumber}</bdi>{p.overpaymentReason && ` — ${p.overpaymentReason}`}</li>
                           ))}
                         </ul>
                       )}
@@ -92,7 +92,7 @@ export async function ResponseSections({ actor, v }: { actor: Actor; v: Violatio
                     <div className="rounded-md bg-band p-3">
                       <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
                         <div className="sm:col-span-2"><dt className="text-xs text-muted">الإجراء التصحيحي</dt><dd>{r.technical.correctiveAction}</dd></div>
-                        <div><dt className="text-xs text-muted">تاريخ التنفيذ</dt><dd>{formatDate(r.technical.implementedAt, "latn", "UTC")}</dd></div>
+                        <div><dt className="text-xs text-muted">تاريخ التنفيذ</dt><dd>{formatDate(r.technical.implementedAt, undefined, "UTC")}</dd></div>
                         <div><dt className="text-xs text-muted">حالة الامتثال</dt><dd><Badge tone={r.technical.compliance === "FULL" ? "success" : r.technical.compliance === "PARTIAL" ? "warning" : "neutral"}>{COMPLIANCE[r.technical.compliance]}</Badge></dd></div>
                         {r.technical.inspectionReport && <div className="sm:col-span-2"><dt className="text-xs text-muted">محضر الكشف اللاحق</dt><dd>{r.technical.inspectionReport}</dd></div>}
                         {r.technical.verificationResult && <div className="sm:col-span-2"><dt className="text-xs text-muted">نتيجة التحقق الفني</dt><dd>{r.technical.verificationResult}</dd></div>}
@@ -191,7 +191,7 @@ export async function ResponseSections({ actor, v }: { actor: Actor; v: Violatio
           <ul className="flex flex-col divide-y divide-line">
             {removals.map((m) => (
               <li key={m.id} className="flex flex-col gap-1 py-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2"><Badge tone={m.status === "APPROVED" ? "success" : m.status === "REJECTED" ? "danger" : "warning"}>{REQ[m.status]}</Badge><span>المعالجة في {formatDate(m.treatedAt, "latn", "UTC")}</span></div>
+                <div className="flex flex-wrap items-center gap-2"><Badge tone={m.status === "APPROVED" ? "success" : m.status === "REJECTED" ? "danger" : "warning"}>{REQ[m.status]}</Badge><span>المعالجة في {formatDate(m.treatedAt, undefined, "UTC")}</span></div>
                 <p>{m.description}</p>
                 <p className="text-xs text-muted">تحققت منها: {m.verifiedByName}{m.inspectionResult && ` — نتيجة الكشف: ${m.inspectionResult}`}{m.approvedAt && ` — القرار في ${formatDateTime(m.approvedAt)}${m.decisionNotes ? `: ${m.decisionNotes}` : ""}`}</p>
                 {m.status === "PENDING" && can(actor, "removal.approve") && (
@@ -232,11 +232,11 @@ export async function ResponseSections({ actor, v }: { actor: Actor; v: Violatio
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold">{o.kind === "APPEAL" ? "طعن" : "اعتراض"}</span>
                   <Badge tone={o.status === "PENDING" ? "warning" : o.status === "APPROVED" ? "success" : "danger"}>{REQ[o.status]}</Badge>
-                  <span className="text-xs text-muted">قُدِّم {formatDate(o.submittedAt, "latn", "UTC")}{o.referenceNumber && ` — رقم ${o.referenceNumber}`}{o.competentAuthority && ` — الجهة المختصة: ${o.competentAuthority}`}</span>
+                  <span className="text-xs text-muted">قُدِّم {formatDate(o.submittedAt, undefined, "UTC")}{o.referenceNumber && ` — رقم ${o.referenceNumber}`}{o.competentAuthority && ` — الجهة المختصة: ${o.competentAuthority}`}</span>
                   {o.suspendedDeadline && <Badge tone="info">عُلِّقت المدة</Badge>}
                 </div>
                 <p>{o.content}</p>
-                {o.events.map((e) => <p key={e.id} className="text-xs">• {formatDate(e.eventAt, "latn", "UTC")}: {e.description}</p>)}
+                {o.events.map((e) => <p key={e.id} className="text-xs">• {formatDate(e.eventAt, undefined, "UTC")}: {e.description}</p>)}
                 {o.outcome && <p className="text-xs">النتيجة: {o.outcome} — الأثر: {o.effectOnFlow}</p>}
                 {o.status === "PENDING" && (
                   <div className="mt-2 grid gap-3 rounded-md bg-band p-3 lg:grid-cols-2">

@@ -29,7 +29,7 @@ export default async function JudgmentsPage() {
               {rows.map((j) => (
                 <tr key={j.id}>
                   <td><bdi>{j.number}</bdi></td>
-                  <td className="text-xs">{formatDate(j.judgmentDate, "latn", "UTC")}</td>
+                  <td className="text-xs">{formatDate(j.judgmentDate, undefined, "UTC")}</td>
                   <td className="text-xs">{j.courtName}</td>
                   <td><Link className="text-brand hover:underline" href={`/criminal-cases/${j.criminalCase.id}`}><bdi>{j.criminalCase.number}</bdi></Link></td>
                   <td>{j.criminalCase.violation.offenderName}</td>

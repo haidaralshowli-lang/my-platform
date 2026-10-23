@@ -31,7 +31,7 @@ export default async function ObjectionsPage() {
                   <td><Link className="text-brand hover:underline" href={`/violations/${o.violation.id}`}><bdi>{o.violation.number}</bdi></Link></td>
                   <td>{o.violation.offenderName}</td>
                   <td className="text-xs">{o.kind === "APPEAL" ? "طعن" : "اعتراض"}</td>
-                  <td className="text-xs">{formatDate(o.submittedAt, "latn", "UTC")}</td>
+                  <td className="text-xs">{formatDate(o.submittedAt, undefined, "UTC")}</td>
                   <td className="text-xs">{o.competentAuthority ?? "—"}</td>
                   <td><Badge tone={o.status === "PENDING" ? "warning" : o.status === "APPROVED" ? "success" : "danger"}>{REQ[o.status]}</Badge>{o.suspendedDeadline && <span className="ms-1"><Badge tone="info">مدة معلقة</Badge></span>}</td>
                 </tr>
