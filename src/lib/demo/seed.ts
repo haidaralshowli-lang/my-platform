@@ -90,8 +90,8 @@ export async function seedDemo(): Promise<DemoResult> {
 
   // ─── قوائم مرجعية تجريبية ───
   const offices = await Promise.all(
-    ([["DEMO-BSR", "مكتب البصرة (تجريبي)", "BAS"], ["DEMO-NJF", "مكتب النجف (تجريبي)", "NAJ"], ["DEMO-NIN", "مكتب نينوى (تجريبي)", "NIN"]] as const).map(async ([code, nameAr, gov]) => {
-      const g = (await prisma.governorate.findUnique({ where: { code: gov } })) ?? (await prisma.governorate.findFirstOrThrow({ where: { id: { not: hq.governorateId } } }));
+    ([["DEMO-BSR", "مكتب البصرة (تجريبي)", "BSR"], ["DEMO-NJF", "مكتب النجف (تجريبي)", "NJF"], ["DEMO-NIN", "مكتب نينوى (تجريبي)", "NIN"]] as const).map(async ([code, nameAr, gov]) => {
+      const g = await prisma.governorate.findUniqueOrThrow({ where: { code: gov } });
       return prisma.office.upsert({ where: { code }, update: {}, create: { code, nameAr, governorateId: g.id } });
     }),
   );
