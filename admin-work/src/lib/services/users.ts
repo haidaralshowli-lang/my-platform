@@ -47,7 +47,7 @@ export const createUserSchema = z.object({
     .regex(/^[a-z0-9._-]{3,40}$/, "اسم المستخدم من 3 إلى 40 حرفاً لاتينياً أو رقماً أو (. _ -)"),
   fullName: z.string().trim().min(3, "الاسم الكامل مطلوب").max(120),
   role: z.enum(["ADMIN", "COORDINATOR"]),
-  permissions: z.array(z.string()).optional(),
+  permissions: z.array(z.string().max(40)).max(40).optional(),
 });
 
 export async function createUser(actor: Actor, input: z.input<typeof createUserSchema>, ctx?: AuditContext) {
@@ -86,7 +86,7 @@ async function assertNotLastAdmin(tx: Tx, target: { id: string; role: Role; isAc
 
 export const updateUserSchema = z.object({
   fullName: z.string().trim().min(3, "الاسم الكامل مطلوب").max(120),
-  permissions: z.array(z.string()).default([]),
+  permissions: z.array(z.string().max(40)).max(40).default([]),
 });
 
 export async function updateUser(actor: Actor, userId: string, input: z.input<typeof updateUserSchema>, ctx?: AuditContext) {

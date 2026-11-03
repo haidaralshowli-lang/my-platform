@@ -24,6 +24,7 @@ const EVENT_LABELS: Record<string, string> = {
   reopened: "إعادة فتح",
   task_linked: "ربط مهمة",
   deleted: "حذف",
+  restored: "استعادة",
 };
 
 export default async function RequestPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {

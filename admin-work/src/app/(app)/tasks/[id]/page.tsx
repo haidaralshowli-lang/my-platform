@@ -28,6 +28,7 @@ const EVENT_LABELS: Record<string, string> = {
   reopened: "إعادة الفتح",
   cancelled: "إلغاء",
   deleted: "حذف",
+  restored: "استعادة",
 };
 
 export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {

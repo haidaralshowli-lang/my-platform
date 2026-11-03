@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { actionActor, requestContext } from "@/lib/auth/server";
 import { formError, type ActionResult } from "@/lib/errors";
-import { addRequestAction, createRequest, deleteRequest, transitionRequest, updateRequest, type RequestInput } from "@/lib/services/requests";
+import { addRequestAction, createRequest, deleteRequest, restoreRequest, transitionRequest, updateRequest, type RequestInput } from "@/lib/services/requests";
 
 const str = (f: FormData, k: string) => {
   const v = f.get(k);
@@ -90,4 +90,15 @@ export async function deleteRequestAction(id: string, _p: ActionResult | null, f
     return formError(e);
   }
   redirect("/requests?deleted=1");
+}
+
+export async function restoreRequestAction(id: string): Promise<ActionResult> {
+  try {
+    const actor = await actionActor("requests.delete");
+    await restoreRequest(actor, id, await requestContext());
+    revalidatePath("/requests/deleted");
+    return { ok: true, message: "تمت استعادة الطلب" };
+  } catch (e) {
+    return formError(e);
+  }
 }

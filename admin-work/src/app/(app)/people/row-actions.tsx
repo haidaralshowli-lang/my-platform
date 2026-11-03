@@ -47,6 +47,6 @@ export function PairActions({ a, b, aSerial, bSerial, canMerge, canEdit }: { a: 
   );
 }
 
-export function RestoreButton({ id }: { id: string }) {
-  return <ActionButton label="استعادة" confirm="استعادة هذا السجل إلى القوائم؟" run={() => restorePersonAction(id)} />;
+export function RestoreButton({ id, run }: { id: string; run?: (id: string) => Promise<ActionResult> }) {
+  return <ActionButton label="استعادة" confirm="استعادة هذا السجل إلى القوائم؟" run={() => (run ?? restorePersonAction)(id)} />;
 }

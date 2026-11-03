@@ -18,7 +18,10 @@
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "admin:create": "tsx --env-file-if-exists=.env scripts/create-admin.ts",
     "job:notifications": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json scripts/run-notifications.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "backup": "tsx --env-file-if-exists=.env scripts/backup.ts",
+    "restore": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json scripts/restore.ts",
+    "test:security": "node tests/e2e/security.cjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "^5.2.6",
@@ -45,6 +48,7 @@
     "tailwindcss": "4.1.13",
     "tsx": "4.20.5",
     "typescript": "5.9.3",
-    "vitest": "3.2.4"
+    "vitest": "3.2.4",
+    "playwright": "1.63.0"
   }
 }

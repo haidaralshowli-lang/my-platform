@@ -48,6 +48,13 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           <Alert tone="success">تم حذف المهمة.</Alert>
         </div>
       )}
+      {can(actor, "tasks.delete") && (
+        <div className="mb-4 text-sm">
+          <Link href="/tasks/deleted" className="text-brand hover:underline">
+            المهام المحذوفة
+          </Link>
+        </div>
+      )}
       <Card>
         <form method="get" className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
           <div className="flex flex-col gap-1 lg:col-span-2">

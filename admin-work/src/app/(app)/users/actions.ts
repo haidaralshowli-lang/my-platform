@@ -16,7 +16,7 @@ export async function createUserAction(_prev: Prev, form: FormData): Promise<Non
         username: String(form.get("username") ?? ""),
         fullName: String(form.get("fullName") ?? ""),
         role: form.get("role") === "ADMIN" ? "ADMIN" : "COORDINATOR",
-        permissions: form.getAll("permissions").map(String),
+        permissions: form.getAll("permissions").slice(0, 40).map(String),
       },
       await requestContext(),
     );
@@ -30,7 +30,7 @@ export async function createUserAction(_prev: Prev, form: FormData): Promise<Non
 export async function updateUserAction(userId: string, _prev: Prev, form: FormData): Promise<NonNullable<Prev>> {
   try {
     const actor = await actionActor("users.manage");
-    await updateUser(actor, userId, { fullName: String(form.get("fullName") ?? ""), permissions: form.getAll("permissions").map(String) }, await requestContext());
+    await updateUser(actor, userId, { fullName: String(form.get("fullName") ?? ""), permissions: form.getAll("permissions").slice(0, 40).map(String) }, await requestContext());
     revalidatePath(`/users/${userId}`);
     return { ok: true, message: "تم حفظ التعديلات" };
   } catch (e) {

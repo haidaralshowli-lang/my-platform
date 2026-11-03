@@ -43,6 +43,7 @@ const ACTION_LABELS: Record<string, string> = {
   "request.closed": "اعتماد إغلاق طلب",
   "request.reopened": "إعادة فتح طلب",
   "request.delete": "حذف طلب",
+  "request.restore": "استعادة طلب",
   "request.export": "تصدير الطلبات",
   "task.create": "إنشاء مهمة",
   "task.updated": "تعديل مهمة",
@@ -57,6 +58,7 @@ const ACTION_LABELS: Record<string, string> = {
   "task.reopened": "إعادة فتح مهمة",
   "task.cancelled": "إلغاء مهمة",
   "task.deleted": "حذف مهمة",
+  "task.restored": "استعادة مهمة",
   "task.export": "تصدير المهام",
   "report.export": "تصدير تقرير",
 };

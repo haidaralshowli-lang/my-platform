@@ -505,3 +505,23 @@ export async function exportTasks(actor: Actor, f: TaskFilter, ctx?: AuditContex
   await prisma.$transaction((tx) => writeAudit(tx, { actor, action: "task.export", entityType: "Task", after: { filters: f, count: rows.length }, ctx }));
   return { buf: await toBuffer(wb), count: rows.length };
 }
+
+/// استعادة مهمة محذوفة (الحذف ناعم دائماً)
+export async function restoreTask(actor: Actor, id: string, ctx?: AuditContext) {
+  assertCan(actor, "tasks.delete");
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.task.findFirst({ where: { id, deletedAt: { not: null } }, select: AUDIT_FIELDS });
+    if (!before) throw notFound();
+    const after = await tx.task.update({ where: { id }, data: { deletedAt: null }, select: AUDIT_FIELDS });
+    await log(tx, actor, { before, after }, "restored", "استعادة المهمة بعد حذفها", ctx);
+  });
+}
+
+export function listDeletedTasks() {
+  return prisma.task.findMany({
+    where: { deletedAt: { not: null } },
+    orderBy: { deletedAt: "desc" },
+    take: 200,
+    select: { id: true, number: true, title: true, status: true, deletedAt: true, assignee: { select: { fullName: true } }, events: { where: { kind: "deleted" }, orderBy: { id: "desc" }, take: 1, select: { note: true, user: { select: { fullName: true } } } } },
+  });
+}

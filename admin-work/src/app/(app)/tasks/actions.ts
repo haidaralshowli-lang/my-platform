@@ -12,6 +12,7 @@ import {
   deleteTask,
   reassignTask,
   recordConsent,
+  restoreTask,
   reopenTask,
   updateProgress,
   updateTaskDetails,
@@ -110,4 +111,15 @@ export async function deleteTaskAction(id: string, _p: ActionResult | null, f: F
     return formError(e);
   }
   redirect("/tasks?deleted=1");
+}
+
+export async function restoreTaskAction(id: string): R {
+  try {
+    const actor = await actionActor("tasks.delete");
+    await restoreTask(actor, id, await requestContext());
+    revalidatePath("/tasks/deleted");
+    return { ok: true, message: "تمت استعادة المهمة" };
+  } catch (e) {
+    return formError(e);
+  }
 }

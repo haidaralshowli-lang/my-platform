@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
   // خطوط التقرير تُقرأ من القرص عند توليد PDF
   outputFileTracingIncludes: { "/api/reports/**": ["./node_modules/@fontsource/ibm-plex-sans-arabic/files/*-normal.woff2"] },
   experimental: {
-    serverActions: { bodySizeLimit: "10mb" },
+    // حد جسم الطلب: يكفي ملف استيراد Excel (5 ميغابايت) مع الترميز
+    serverActions: { bodySizeLimit: "7mb" },
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

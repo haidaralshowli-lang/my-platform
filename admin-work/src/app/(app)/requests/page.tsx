@@ -45,6 +45,13 @@ export default async function RequestsPage({ searchParams }: { searchParams: Pro
         <RequestDisclaimer />
         {sp.deleted === "1" && <Alert tone="success">تم حذف الطلب.</Alert>}
       </div>
+      {can(actor, "requests.delete") && (
+        <div className="mb-4 text-sm">
+          <Link href="/requests/deleted" className="text-brand hover:underline">
+            الطلبات المحذوفة
+          </Link>
+        </div>
+      )}
       <Card>
         <form method="get" className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 xl:items-end">
           <div className="flex flex-col gap-1 xl:col-span-2">

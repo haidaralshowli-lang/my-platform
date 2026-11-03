@@ -391,3 +391,24 @@ export async function exportRequests(actor: Actor, f: RequestFilter, ctx?: Audit
   await prisma.$transaction((tx) => writeAudit(tx, { actor, action: "request.export", entityType: "Request", after: { filters: f, count: rows.length }, ctx }));
   return { buf: await toBuffer(wb), count: rows.length };
 }
+
+/// استعادة طلب محذوف (الحذف ناعم دائماً)
+export async function restoreRequest(actor: Actor, id: string, ctx?: AuditContext) {
+  assertCan(actor, "requests.delete");
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.request.findFirst({ where: { id, deletedAt: { not: null } }, select: AUDIT_FIELDS });
+    if (!before) throw notFound();
+    const after = await tx.request.update({ where: { id }, data: { deletedAt: null }, select: AUDIT_FIELDS });
+    await tx.requestEvent.create({ data: { requestId: id, userId: actor.id, kind: "restored", note: "استعادة الطلب بعد حذفه" } });
+    await writeAudit(tx, { actor, action: "request.restore", entityType: "Request", entityId: id, before, after, ctx });
+  });
+}
+
+export function listDeletedRequests() {
+  return prisma.request.findMany({
+    where: { deletedAt: { not: null } },
+    orderBy: { deletedAt: "desc" },
+    take: 200,
+    select: { id: true, number: true, applicantName: true, status: true, deletedAt: true, events: { where: { kind: "deleted" }, orderBy: { id: "desc" }, take: 1, select: { note: true, user: { select: { fullName: true } } } } },
+  });
+}
