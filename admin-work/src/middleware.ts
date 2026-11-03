@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/health"];
+const PUBLIC_PATHS = ["/login", "/api/health", "/api/cron"];
 const SESSION_COOKIE = "aw_session";
 
 // الوسيط يتحقق فقط من وجود ملف الجلسة لإعادة التوجيه السريع، وسياسة CSP بمعرّف nonce لكل طلب.

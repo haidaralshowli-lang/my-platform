@@ -17,6 +17,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "admin:create": "tsx --env-file-if-exists=.env scripts/create-admin.ts",
+    "job:notifications": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json scripts/run-notifications.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "exceljs": "^4.4.0",
     "lucide-react": "0.469.0",
     "next": "15.5.28",
+    "playwright-core": "1.63.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "server-only": "0.0.1",

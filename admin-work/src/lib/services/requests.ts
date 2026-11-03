@@ -9,6 +9,7 @@ import { addSheet, newWorkbook, toBuffer } from "@/lib/excel";
 import { PRIORITY, REQUEST_STATUS, REQUEST_TYPE } from "@/lib/labels";
 import { dayInText, fmtDay, parseDay, today } from "@/lib/dates";
 import { fmtDateTime } from "@/lib/format";
+import { notifyNewRequest } from "./notifications";
 
 export const PAGE_SIZE = 25;
 
@@ -138,6 +139,7 @@ export async function createRequest(actor: Actor, input: RequestInput, ctx?: Aud
     });
     await tx.requestEvent.create({ data: { requestId: r.id, userId: actor.id, kind: "created", toStatus: "NEW", note: "تسجيل الطلب" } });
     await writeAudit(tx, { actor, action: "request.create", entityType: "Request", entityId: r.id, after: r, ctx });
+    await notifyNewRequest(tx, actor, r);
     return r;
   });
 }

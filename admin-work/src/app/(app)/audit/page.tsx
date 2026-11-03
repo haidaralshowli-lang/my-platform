@@ -58,6 +58,7 @@ const ACTION_LABELS: Record<string, string> = {
   "task.cancelled": "إلغاء مهمة",
   "task.deleted": "حذف مهمة",
   "task.export": "تصدير المهام",
+  "report.export": "تصدير تقرير",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -68,6 +69,7 @@ const ENTITY_LABELS: Record<string, string> = {
   Person: "شخص",
   Request: "طلب",
   Task: "مهمة",
+  Report: "تقرير",
 };
 
 function JsonCell({ value }: { value: Prisma.JsonValue }) {

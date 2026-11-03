@@ -9,6 +9,7 @@ import { addSheet, newWorkbook, toBuffer } from "@/lib/excel";
 import { CONSENT, PRIORITY, TASK_STATUS } from "@/lib/labels";
 import { dayInText, fmtDay, parseDay, today } from "@/lib/dates";
 import { fmtDateTime } from "@/lib/format";
+import { notifyTaskAssigned } from "./notifications";
 
 export const PAGE_SIZE = 25;
 
@@ -147,6 +148,8 @@ export async function createTask(actor: Actor, input: TaskInput, ctx?: AuditCont
       select: AUDIT_FIELDS,
     });
     await tx.taskEvent.create({ data: { taskId: t.id, userId: actor.id, kind: "created", toStatus: "NOT_STARTED", note: "إنشاء المهمة بانتظار موافقة المكلف" } });
+    const assignee = await tx.person.findUniqueOrThrow({ where: { id: d.assigneeId }, select: { fullName: true } });
+    await notifyTaskAssigned(tx, actor, { id: t.id, number: t.number, title: t.title, assigneeName: assignee.fullName, dueDate: t.dueDate });
     await writeAudit(tx, { actor, action: "task.create", entityType: "Task", entityId: t.id, after: t, ctx });
     if (d.requestId) {
       await tx.requestEvent.create({ data: { requestId: d.requestId, userId: actor.id, kind: "task_linked", note: `ربط المهمة ${number}: ${d.title}` } });
@@ -286,6 +289,7 @@ export async function reassignTask(actor: Actor, id: string, input: z.input<type
       select: AUDIT_FIELDS,
     });
     await log(tx, actor, { before, after }, "reassigned", `أُعيد إسناد المهمة إلى ${person.fullName} (رقم ${person.serial})${d.note ? ` — ${d.note}` : ""}`, ctx);
+    await notifyTaskAssigned(tx, actor, { id: after.id, number: after.number, title: after.title, assigneeName: person.fullName, dueDate: after.dueDate }, true);
     return after;
   });
 }

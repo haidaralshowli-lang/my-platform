@@ -15,7 +15,9 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   reactStrictMode: true,
-  serverExternalPackages: ["@node-rs/argon2"],
+  serverExternalPackages: ["@node-rs/argon2", "playwright-core"],
+  // خطوط التقرير تُقرأ من القرص عند توليد PDF
+  outputFileTracingIncludes: { "/api/reports/**": ["./node_modules/@fontsource/ibm-plex-sans-arabic/files/*-normal.woff2"] },
   experimental: {
     serverActions: { bodySizeLimit: "10mb" },
   },
