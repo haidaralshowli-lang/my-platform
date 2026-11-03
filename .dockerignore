@@ -8,3 +8,4 @@ backups
 test-results
 playwright-report
 tests/e2e/.state.json
+admin-work

@@ -1,0 +1,365 @@
+// نظام إدارة العمل الإداري والتنظيمي — مخطط قاعدة البيانات الكامل
+// صُمِّم المخطط لجميع المراحل منذ البداية حتى لا تتغير البنية الأساسية لاحقاً.
+// مخطط العلاقات والشرح في DATABASE.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// ─────────────────────────── المستخدمون والمصادقة ───────────────────────────
+
+enum Role {
+  ADMIN       // مدير النظام / مدير العمل
+  COORDINATOR // المنسق العام
+}
+
+model User {
+  id                 String    @id @default(uuid()) @db.Uuid
+  username           String    @unique
+  fullName           String
+  passwordHash       String
+  role               Role
+  /// صلاحيات المنسق التشغيلية التي يحددها المدير (يتجاهلها النظام لدور المدير الذي يملك كل الصلاحيات)
+  permissions        String[]  @default([])
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  passwordChangedAt  DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdById        String?   @db.Uuid
+
+  sessions          Session[]
+  followedPeople    Person[]       @relation("PersonFollowUpOwner")
+  ownedRequests     Request[]      @relation("RequestOwner")
+  createdRequests   Request[]      @relation("RequestCreatedBy")
+  requestEvents     RequestEvent[]
+  createdTasks      Task[]         @relation("TaskCreatedBy")
+  taskEvents        TaskEvent[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  tokenHash  String    @unique
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  ip         String?
+  userAgent  String?
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id        BigInt   @id @default(autoincrement())
+  username  String
+  ip        String?
+  success   Boolean
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+  @@index([username, createdAt])
+}
+
+// ─────────────────────────── القوائم المرجعية ───────────────────────────
+
+/// المحافظات أو المناطق
+model Region {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  people    Person[]
+}
+
+/// الجهات المختصة التي تُحال إليها الطلبات
+model Authority {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  requests  Request[]
+}
+
+/// إعدادات النظام (مدة عدم التحديث، أيام التنبيه المسبق، سياسة القفل...)
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// عدّادات الترقيم السنوي للطلبات والمهام (تُقفل الصف عند الزيادة لمنع التكرار)
+model Counter {
+  name  String
+  year  Int
+  value Int    @default(0)
+
+  @@id([name, year])
+}
+
+// ─────────────────────────── قاعدة بيانات الأشخاص ───────────────────────────
+
+enum DataStatus {
+  COMPLETE     // مكتملة
+  INCOMPLETE   // ناقصة
+  NEEDS_UPDATE // بانتظار التحديث
+}
+
+enum EngagementLevel {
+  HIGH   // مرتفع
+  MEDIUM // متوسط
+  LOW    // منخفض
+  NONE   // غير متفاعل
+}
+
+model Person {
+  id                String          @id @default(uuid()) @db.Uuid
+  /// الرقم التسلسلي التلقائي
+  serial            Int             @unique @default(autoincrement())
+  fullName          String
+  /// الاسم بعد توحيد الهمزات والتاء المربوطة والمسافات، لاكتشاف التكرار والأسماء المتشابهة
+  normalizedName    String
+  phone             String?
+  regionId          Int?
+  region            Region?         @relation(fields: [regionId], references: [id])
+  followUpOwnerId   String?         @db.Uuid
+  followUpOwner     User?           @relation("PersonFollowUpOwner", fields: [followUpOwnerId], references: [id])
+  dataStatus        DataStatus      @default(INCOMPLETE)
+  engagementLevel   EngagementLevel @default(NONE)
+  /// متاح للتعاون الإداري
+  availableForWork  Boolean         @default(false)
+  /// ملاحظات إدارية غير حساسة فقط
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  createdById       String?         @db.Uuid
+  updatedById       String?         @db.Uuid
+  /// حذف ناعم: يبقى السجل قابلاً للاستعادة
+  deletedAt         DateTime?
+  deletedById       String?         @db.Uuid
+
+  tasks             Task[]
+  requests          Request[]
+
+  @@index([normalizedName])
+  @@index([regionId])
+  @@index([followUpOwnerId])
+  @@index([dataStatus])
+}
+
+// ─────────────────────────── الطلبات ───────────────────────────
+
+enum RequestType {
+  ADMINISTRATIVE // طلب إداري
+  PUBLIC_SERVICE // طلب خدمي عام
+  INQUIRY        // استفسار
+  TRANSACTION    // متابعة معاملة
+  OTHER          // طلب آخر
+}
+
+enum RequestStatus {
+  NEW         // جديد
+  UNDER_REVIEW // قيد المراجعة
+  REFERRED    // محال إلى الجهة المختصة
+  FOLLOWING   // قيد المتابعة
+  DONE        // منجز
+  FAILED      // متعذر
+  CLOSED      // مغلق
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Request {
+  id               String        @id @default(uuid()) @db.Uuid
+  /// الرقم التلقائي بصيغة REQ-2026-0001
+  number           String        @unique
+  receivedAt       DateTime      @db.Date
+  applicantName    String
+  applicantId      String?       @db.Uuid
+  applicant        Person?       @relation(fields: [applicantId], references: [id])
+  type             RequestType
+  description      String
+  authorityId      Int?
+  authority        Authority?    @relation(fields: [authorityId], references: [id])
+  ownerId          String?       @db.Uuid
+  owner            User?         @relation("RequestOwner", fields: [ownerId], references: [id])
+  priority         Priority      @default(NORMAL)
+  status           RequestStatus @default(NEW)
+  lastAction       String?
+  followUpDate     DateTime?     @db.Date
+  closedAt         DateTime?
+  closedById       String?       @db.Uuid
+  failureReason    String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  createdById      String?       @db.Uuid
+  createdBy        User?         @relation("RequestCreatedBy", fields: [createdById], references: [id])
+  deletedAt        DateTime?
+
+  events           RequestEvent[]
+  tasks            Task[]
+
+  @@index([status])
+  @@index([type])
+  @@index([ownerId])
+  @@index([followUpDate])
+  @@index([receivedAt])
+}
+
+/// السجل الزمني للطلب: كل إجراء، ومن قام به، ومتى
+model RequestEvent {
+  id         BigInt         @id @default(autoincrement())
+  requestId  String         @db.Uuid
+  request    Request        @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  at         DateTime       @default(now())
+  userId     String?        @db.Uuid
+  user       User?          @relation(fields: [userId], references: [id])
+  kind       String
+  fromStatus RequestStatus?
+  toStatus   RequestStatus?
+  note       String?
+
+  @@index([requestId, at])
+}
+
+// ─────────────────────────── المهام ───────────────────────────
+
+enum TaskStatus {
+  NOT_STARTED // لم تبدأ
+  IN_PROGRESS // قيد التنفيذ
+  WAITING     // بانتظار رد
+  DONE        // منجزة
+  STUCK       // متعثرة
+  CANCELLED   // ملغاة
+}
+
+/// موافقة الشخص المكلف: لا تصبح المهمة تكليفاً نافذاً إلا بعد القبول
+enum ConsentStatus {
+  PENDING          // بانتظار الموافقة
+  ACCEPTED         // وافق على المهمة والمدة
+  DECLINED         // اعتذر
+  CHANGE_REQUESTED // طلب تعديل الموعد
+}
+
+model Task {
+  id               String        @id @default(uuid()) @db.Uuid
+  /// الرقم التلقائي بصيغة TSK-2026-0001
+  number           String        @unique
+  title            String
+  details          String?
+  assigneeId       String        @db.Uuid
+  assignee         Person        @relation(fields: [assigneeId], references: [id])
+  requestId        String?       @db.Uuid
+  request          Request?      @relation(fields: [requestId], references: [id])
+  assignedAt       DateTime      @default(now())
+  dueDate          DateTime      @db.Date
+  priority         Priority      @default(NORMAL)
+  status           TaskStatus    @default(NOT_STARTED)
+  progress         Int           @default(0)
+  consentStatus    ConsentStatus @default(PENDING)
+  consentAt        DateTime?
+  consentNote      String?
+  /// الموعد البديل الذي يقترحه المكلف عند طلب التعديل
+  proposedDueDate  DateTime?     @db.Date
+  obstacles        String?
+  finalResult      String?
+  lastUpdateAt     DateTime      @default(now())
+  closedAt         DateTime?
+  closedById       String?       @db.Uuid
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  createdById      String?       @db.Uuid
+  createdBy        User?         @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  deletedAt        DateTime?
+
+  events           TaskEvent[]
+
+  @@index([status])
+  @@index([assigneeId])
+  @@index([dueDate])
+  @@index([consentStatus])
+}
+
+model TaskEvent {
+  id        BigInt   @id @default(autoincrement())
+  taskId    String   @db.Uuid
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  at        DateTime @default(now())
+  userId    String?  @db.Uuid
+  user      User?    @relation(fields: [userId], references: [id])
+  kind      String
+  fromStatus TaskStatus?
+  toStatus   TaskStatus?
+  progress  Int?
+  note      String?
+
+  @@index([taskId, at])
+}
+
+// ─────────────────────────── الإشعارات ───────────────────────────
+
+model Notification {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       String
+  title      String
+  body       String?
+  link       String?
+  entityType String?
+  entityId   String?
+  /// يمنع تكرار التنبيه نفسه للمستخدم نفسه
+  dedupeKey  String
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt])
+}
+
+// ─────────────────────────── سجل التدقيق ───────────────────────────
+
+/// سجل إلحاقي فقط: مشغّل في قاعدة البيانات يمنع التعديل والحذف، والقيود متسلسلة بالتجزئة لكشف العبث
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  at         DateTime @default(now())
+  userId     String?  @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  username   String?
+  role       Role?
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  reason     String?
+  ip         String?
+  requestId  String?
+  prevHash   String?
+  hash       String
+
+  @@index([entityType, entityId])
+  @@index([userId, at])
+  @@index([action, at])
+  @@index([at])
+}
