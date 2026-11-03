@@ -26,3 +26,16 @@ export function toActionError(err: unknown): { ok: false; error: string } {
   console.error("[unexpected-error]", err instanceof Error ? err.message : err);
   return { ok: false, error: "حدث خطأ غير متوقع. يرجى المحاولة مجدداً أو مراجعة مدير النظام." };
 }
+
+/// مثل toActionError، مع تحويل أخطاء التحقق (Zod) إلى رسائل لكل حقل
+export function formError(err: unknown): { ok: false; error: string; fieldErrors?: Record<string, string[]> } {
+  if (err && typeof err === "object" && "issues" in err && Array.isArray((err as { issues: unknown[] }).issues)) {
+    const fe: Record<string, string[]> = {};
+    for (const i of (err as { issues: { path: (string | number)[]; message: string }[] }).issues) {
+      (fe[String(i.path[0] ?? "form")] ??= []).push(i.message);
+    }
+    const first = Object.values(fe)[0]?.[0];
+    return { ok: false, error: first && Object.keys(fe).length === 1 ? first : "يرجى تصحيح الحقول المشار إليها", fieldErrors: fe };
+  }
+  return toActionError(err);
+}

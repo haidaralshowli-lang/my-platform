@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { doneWhere, failedWhere, overdueWhere } from "./requests";
+import { overdueTaskWhere } from "./tasks";
 import { getSetting } from "@/lib/settings";
 
 /// مؤشرات قاعدة بيانات الأشخاص في لوحة المتابعة. كل مؤشر يقابله فلتر في صفحة الأشخاص يعرض السجلات نفسها.
@@ -34,4 +36,38 @@ export async function peopleIndicators() {
     byOwner: byOwner.map((r) => ({ id: r.followUpOwnerId, name: r.followUpOwnerId ? (ownerName.get(r.followUpOwnerId) ?? "—") : "غير محدد", count: r._count._all })),
     recent,
   };
+}
+
+/// مؤشرات الطلبات. «قيد المتابعة» تشمل المحال إلى الجهة المختصة، و«المنجزة/المتعذرة» تشمل المغلقة على النتيجة نفسها.
+export async function requestIndicators() {
+  const live = { deletedAt: null };
+  const [total, fresh, review, following, done, failed, overdue, closed] = await Promise.all([
+    prisma.request.count({ where: live }),
+    prisma.request.count({ where: { ...live, status: "NEW" } }),
+    prisma.request.count({ where: { ...live, status: "UNDER_REVIEW" } }),
+    prisma.request.count({ where: { ...live, status: { in: ["REFERRED", "FOLLOWING"] } } }),
+    prisma.request.count({ where: { ...live, ...doneWhere } }),
+    prisma.request.count({ where: { ...live, ...failedWhere } }),
+    prisma.request.count({ where: { ...live, ...overdueWhere() } }),
+    prisma.request.count({ where: { ...live, status: "CLOSED" } }),
+  ]);
+  return { total, fresh, review, following, done, failed, overdue, closed };
+}
+
+/// مؤشرات المهام. نسبة الإنجاز العامة = المنجزة ÷ (الإجمالي − الملغاة).
+export async function taskIndicators() {
+  const live = { deletedAt: null };
+  const [total, fresh, inProgress, done, stuck, cancelled, pendingConsent, overdue, awaitingClose] = await Promise.all([
+    prisma.task.count({ where: live }),
+    prisma.task.count({ where: { ...live, status: "NOT_STARTED" } }),
+    prisma.task.count({ where: { ...live, status: { in: ["IN_PROGRESS", "WAITING"] } } }),
+    prisma.task.count({ where: { ...live, status: "DONE" } }),
+    prisma.task.count({ where: { ...live, status: "STUCK" } }),
+    prisma.task.count({ where: { ...live, status: "CANCELLED" } }),
+    prisma.task.count({ where: { ...live, consentStatus: { in: ["PENDING", "CHANGE_REQUESTED"] }, status: { not: "CANCELLED" } } }),
+    prisma.task.count({ where: { ...live, ...overdueTaskWhere() } }),
+    prisma.task.count({ where: { ...live, status: "DONE", closedAt: null } }),
+  ]);
+  const base = total - cancelled;
+  return { total, fresh, inProgress, done, stuck, cancelled, pendingConsent, overdue, awaitingClose, completionRate: base ? Math.round((done / base) * 100) : 0 };
 }

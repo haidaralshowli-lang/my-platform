@@ -1,7 +1,7 @@
 import { can, type Actor, type Permission } from "@/lib/rbac";
 
 /// المرحلة المنفذة حالياً. لا يظهر أي قسم في القائمة قبل تنفيذه فعلياً (لا واجهات تجريبية).
-export const IMPLEMENTED_PHASE = 2;
+export const IMPLEMENTED_PHASE = 3;
 
 type NavItem = { href: string; label: string; icon: string; perm?: Permission; phase: number };
 

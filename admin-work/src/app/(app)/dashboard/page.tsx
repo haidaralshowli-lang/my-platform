@@ -3,7 +3,7 @@ import { requirePagePermission } from "@/lib/auth/server";
 import { can } from "@/lib/rbac";
 import { DATA_STATUS } from "@/lib/labels";
 import { fmtDate } from "@/lib/format";
-import { peopleIndicators } from "@/lib/services/dashboard";
+import { peopleIndicators, requestIndicators, taskIndicators } from "@/lib/services/dashboard";
 import { Badge, Card, cn, PageHeader, type Tone } from "@/components/ui";
 
 export const metadata = { title: "لوحة المتابعة" };
@@ -70,7 +70,11 @@ function Distribution({ title, rows, total, param }: { title: string; rows: { id
 export default async function DashboardPage() {
   const actor = await requirePagePermission("dashboard.view");
   const canPeople = can(actor, "people.view");
-  const s = await peopleIndicators();
+  const [s, rq, tk] = await Promise.all([
+    peopleIndicators(),
+    can(actor, "requests.view") ? requestIndicators() : null,
+    can(actor, "tasks.view") ? taskIndicators() : null,
+  ]);
   const link = (q: string) => (canPeople ? `/people${q}` : undefined);
   return (
     <>
@@ -87,6 +91,52 @@ export default async function DashboardPage() {
           <Indicator label="متاحون للتعاون الإداري" value={s.available} href={link("?available=1")} tone="neutral" />
         </div>
       </section>
+      {rq && (
+        <section aria-labelledby="req-ind" className="mt-6">
+          <h2 id="req-ind" className="mb-3 text-base font-semibold text-brand">
+            مؤشرات الطلبات
+          </h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+            <Indicator label="إجمالي الطلبات" value={rq.total} href="/requests" tone="info" />
+            <Indicator label="الطلبات الجديدة" value={rq.fresh} href="/requests?status=NEW" tone="info" />
+            <Indicator label="قيد المراجعة" value={rq.review} href="/requests?status=UNDER_REVIEW" tone="legal" />
+            <Indicator label="قيد المتابعة" value={rq.following} href="/requests?status=REFERRED,FOLLOWING" tone="warning" hint="تشمل المحالة إلى الجهة المختصة" />
+            <Indicator label="المنجزة" value={rq.done} href="/requests?outcome=done" tone="success" />
+            <Indicator label="المتعذرة" value={rq.failed} href="/requests?outcome=failed" tone="neutral" />
+            <Indicator label="متأخرة عن موعد المتابعة" value={rq.overdue} href="/requests?overdue=1&sort=followUpDate&dir=asc" tone="danger" />
+          </div>
+        </section>
+      )}
+      {tk && (
+        <section aria-labelledby="task-ind" className="mt-6">
+          <h2 id="task-ind" className="mb-3 text-base font-semibold text-brand">
+            مؤشرات المهام
+          </h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+            <Indicator label="إجمالي المهام" value={tk.total} href="/tasks" tone="info" />
+            <Indicator label="المهام الجديدة" value={tk.fresh} href="/tasks?status=NOT_STARTED" tone="info" hint="لم تبدأ بعد" />
+            <Indicator label="قيد التنفيذ" value={tk.inProgress} href="/tasks?status=IN_PROGRESS,WAITING" tone="warning" hint="تشمل بانتظار رد" />
+            <Indicator label="المنجزة" value={tk.done} href="/tasks?status=DONE" tone="success" />
+            <Indicator label="المتعثرة" value={tk.stuck} href="/tasks?status=STUCK" tone="danger" />
+            <Indicator label="نسبة الإنجاز العامة" value={`${tk.completionRate}%`} tone="success" hint="المنجزة من غير الملغاة" />
+            <Indicator label="بانتظار موافقة المكلف" value={tk.pendingConsent} href="/tasks?consent=PENDING" tone="legal" />
+          </div>
+          {(tk.overdue > 0 || tk.awaitingClose > 0) && (
+            <div className="mt-3 flex flex-wrap gap-3 text-sm">
+              {tk.overdue > 0 && (
+                <Link href="/tasks?overdue=1&sort=dueDate&dir=asc" className="rounded-md bg-tone-danger-bg px-3 py-1.5 text-tone-danger hover:underline">
+                  <span className="ltr-num font-semibold">{tk.overdue}</span> مهمة نافذة متأخرة عن موعدها
+                </Link>
+              )}
+              {tk.awaitingClose > 0 && (
+                <Link href="/tasks?awaitingClose=1" className="rounded-md bg-tone-warning-bg px-3 py-1.5 text-tone-warning hover:underline">
+                  <span className="ltr-num font-semibold">{tk.awaitingClose}</span> مهمة منجزة بانتظار اعتماد الإغلاق
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
+      )}
       {canPeople && (
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
           <Distribution title="التوزيع حسب المحافظة أو المنطقة" rows={s.byRegion} total={s.total} param="region" />

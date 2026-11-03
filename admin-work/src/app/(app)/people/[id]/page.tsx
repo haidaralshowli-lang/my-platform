@@ -4,8 +4,9 @@ import { requirePagePermission } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/rbac";
 import { orNotFound } from "@/lib/page-helpers";
-import { DATA_STATUS, ENGAGEMENT } from "@/lib/labels";
-import { fmtDate, fmtDateTime } from "@/lib/format";
+import { DATA_STATUS, ENGAGEMENT, REQUEST_STATUS } from "@/lib/labels";
+import { fmtDay } from "@/lib/dates";
+import { fmtDateTime } from "@/lib/format";
 import { getSetting } from "@/lib/settings";
 import { getPerson, personFormOptions } from "@/lib/services/people";
 import { Alert, Badge, Card, PageHeader } from "@/components/ui";
@@ -41,10 +42,14 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
   const sp = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const p = await orNotFound(getPerson(id, { includeDeleted: can(actor, "people.delete") }));
-  const [{ regions, owners }, history, staleDays] = await Promise.all([
+  const [{ regions, owners }, history, staleDays, requests, taskCount] = await Promise.all([
     personFormOptions(),
     prisma.auditLog.findMany({ where: { entityType: "Person", entityId: id }, orderBy: { id: "desc" }, take: 30 }),
     getSetting(prisma, "people.staleDays"),
+    can(actor, "requests.view")
+      ? prisma.request.findMany({ where: { applicantId: id, deletedAt: null }, orderBy: { receivedAt: "desc" }, take: 10, select: { id: true, number: true, status: true, receivedAt: true } })
+      : Promise.resolve([]),
+    prisma.task.count({ where: { assigneeId: id, deletedAt: null } }),
   ]);
   // يُبقي المنطقة/المسؤول الحاليين في القوائم حتى لو عُطِّلا لاحقاً
   const regionOpts = p.regionId && !regions.some((r) => r.id === p.regionId) ? [...regions, { id: p.regionId, name: `${p.region?.name} (معطلة)` }] : regions;
@@ -78,7 +83,7 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
         }
       />
       <div className="mb-4 flex flex-col gap-2">
-        {sp.created === "1" && <Alert tone="success">تم حفظ السجل برقم تسلسلي {p.serial}.</Alert>}
+        {sp.created === "1" && history.length === 1 && <Alert tone="success">تم حفظ السجل برقم تسلسلي {p.serial}.</Alert>}
         {deleted && (
           <Alert tone="danger">
             هذا السجل محذوف منذ {fmtDateTime(p.deletedAt)}. السبب: {p.deleteReason ?? "—"}
@@ -121,10 +126,45 @@ export default async function PersonPage({ params, searchParams }: { params: Pro
             <ul className="space-y-1 text-sm">
               {p.tasks.map((t) => (
                 <li key={t.id}>
-                  <span className="ltr-num text-muted">{t.number}</span> {t.title} — <span className="ltr-num">{t.progress}%</span>، الموعد <span className="ltr-num">{fmtDate(t.dueDate)}</span>
+                  <Link href={`/tasks/${t.id}`} className="text-brand hover:underline">
+                    <span className="ltr-num text-muted">{t.number}</span> {t.title}
+                  </Link>{" "}
+                  — <span className="ltr-num">{t.progress}%</span>، الموعد <span className="ltr-num">{fmtDay(t.dueDate)}</span>
                 </li>
               ))}
             </ul>
+          )}
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {can(actor, "tasks.view") && taskCount > 0 && (
+              <Link href={`/tasks?assignee=${p.id}`} className="text-brand hover:underline">
+                كل مهامه (<span className="ltr-num">{taskCount}</span>)
+              </Link>
+            )}
+            {can(actor, "tasks.create") && !deleted && (
+              <Link href={`/tasks/new?assignee=${p.id}`} className="text-brand hover:underline">
+                + تكليفه بمهمة
+              </Link>
+            )}
+          </div>
+          {can(actor, "requests.view") && (
+            <>
+              <h3 className="mt-5 mb-2 text-sm font-semibold text-brand">الطلبات المقدمة منه</h3>
+              {requests.length === 0 ? (
+                <p className="text-sm text-muted">لا توجد طلبات مرتبطة بهذا السجل.</p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {requests.map((r) => (
+                    <li key={r.id} className="flex flex-wrap items-center gap-2">
+                      <Link href={`/requests/${r.id}`} className="ltr-num text-brand hover:underline">
+                        {r.number}
+                      </Link>
+                      <Badge tone={REQUEST_STATUS[r.status].tone}>{REQUEST_STATUS[r.status].label}</Badge>
+                      <span className="ltr-num text-xs text-muted">{fmtDay(r.receivedAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </Card>
         <Card title={can(actor, "people.edit") && !deleted ? "تعديل البيانات" : "البيانات"} className="lg:col-span-2">
