@@ -1,0 +1,15 @@
+# نظام إدارة العمل الإداري على Netlify (قاعدة البيانات على Supabase، مخطط aw). راجع DEPLOYMENT.md
+# يُضبط موقع Netlify بـ «Base directory = admin-work» لأن المستودع يضم منصة المخالفات أيضاً.
+[build]
+  command = "sh scripts/netlify-build.sh"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[functions]
+  directory = "netlify/functions"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

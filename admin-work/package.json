@@ -21,7 +21,9 @@
     "postinstall": "prisma generate",
     "backup": "tsx --env-file-if-exists=.env scripts/backup.ts",
     "restore": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json scripts/restore.ts",
-    "test:security": "node tests/e2e/security.cjs"
+    "test:security": "node tests/e2e/security.cjs",
+    "password:hash": "tsx scripts/hash-password.ts",
+    "bootstrap": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json scripts/bootstrap.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "^5.2.6",
