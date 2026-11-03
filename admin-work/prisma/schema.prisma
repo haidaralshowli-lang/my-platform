@@ -152,6 +152,11 @@ model Person {
   /// حذف ناعم: يبقى السجل قابلاً للاستعادة
   deletedAt         DateTime?
   deletedById       String?         @db.Uuid
+  deleteReason      String?
+  /// عند الدمج: السجل الأساسي الذي دُمج فيه هذا السجل
+  mergedIntoId      String?         @db.Uuid
+  mergedInto        Person?         @relation("PersonMerge", fields: [mergedIntoId], references: [id])
+  mergedFrom        Person[]        @relation("PersonMerge")
 
   tasks             Task[]
   requests          Request[]
@@ -160,6 +165,17 @@ model Person {
   @@index([regionId])
   @@index([followUpOwnerId])
   @@index([dataStatus])
+}
+
+/// زوج من السجلات راجعه المستخدم وأكد أنهما شخصان مختلفان، فلا يظهر مجدداً في مراجعة التكرار.
+/// يُخزَّن دائماً بترتيب (aId < bId).
+model PersonDistinctPair {
+  aId         String   @db.Uuid
+  bId         String   @db.Uuid
+  createdAt   DateTime @default(now())
+  createdById String?  @db.Uuid
+
+  @@id([aId, bId])
 }
 
 // ─────────────────────────── الطلبات ───────────────────────────

@@ -30,7 +30,7 @@ export async function loginAction(_prev: ActionResult | null, form: FormData): P
   } catch (e) {
     return toActionError(e);
   }
-  redirect(mustChange ? "/change-password" : "/home");
+  redirect(mustChange ? "/change-password" : "/");
 }
 
 export async function logoutAction(): Promise<void> {
@@ -62,5 +62,5 @@ export async function changePasswordAction(_prev: ActionResult | null, form: For
   } catch (e) {
     return toActionError(e);
   }
-  redirect("/home");
+  redirect("/");
 }

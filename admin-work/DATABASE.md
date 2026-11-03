@@ -18,6 +18,7 @@ erDiagram
   Authority ||--o{ Request : "جهة مختصة"
   Person ||--o{ Request : "مقدم الطلب (اختياري)"
   Person ||--o{ Task : "الشخص المكلف"
+  Person ||--o{ Person : "دُمج في"
   Request ||--o{ RequestEvent : "سجل زمني"
   Request ||--o{ Task : "مهام مرتبطة"
   Task ||--o{ TaskEvent : "سجل زمني"
@@ -41,6 +42,7 @@ erDiagram
     EngagementLevel engagementLevel
     bool availableForWork
     datetime deletedAt "حذف ناعم"
+    uuid mergedIntoId FK "السجل الذي دُمج فيه"
   }
   Request {
     uuid id PK
@@ -87,6 +89,7 @@ erDiagram
 | `Person` | قاعدة بيانات الأشخاص | 2 |
 | `Request` / `RequestEvent` | الطلبات وسجلها الزمني | 3 |
 | `Task` / `TaskEvent` | المهام وموافقة المكلف وسجلها الزمني | 3 |
+| `PersonDistinctPair` | أزواج السجلات المؤكد أنها لشخصين مختلفين، فلا تظهر في مراجعة التكرار | 2 |
 | `Notification` | التنبيهات الداخلية (دون تكرار بفضل `dedupeKey`) | 4 |
 
 ## القيم المرجعية
@@ -106,7 +109,8 @@ erDiagram
 2. **السجلات الزمنية للطلبات والمهام** (`RequestEvent`، `TaskEvent`) لا تُعدَّل ولا تُحذف.
 3. **رقم الهاتف** فريد بين السجلات غير المحذوفة (فهرس جزئي)، ويُسمح بإعادة استخدامه بعد الحذف الناعم.
 4. **نسبة الإنجاز** بين 0 و100 (قيد CHECK).
-5. **الحذف ناعم** للأشخاص والطلبات والمهام (`deletedAt`)، فيمكن استعادة أي سجل حُذف بالخطأ.
+5. **البحث التقريبي**: إضافة `pg_trgm` مع فهرس GIN على الاسم الموحد لاكتشاف الأسماء المتشابهة بسرعة.
+6. **الحذف ناعم** للأشخاص والطلبات والمهام (`deletedAt`)، فيمكن استعادة أي سجل حُذف بالخطأ.
 
 ## ما لا يُخزَّن
 

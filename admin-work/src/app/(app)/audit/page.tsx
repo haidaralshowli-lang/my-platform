@@ -28,6 +28,14 @@ const ACTION_LABELS: Record<string, string> = {
   "authority.create": "إضافة جهة مختصة",
   "authority.update": "تعديل جهة مختصة",
   "setting.update": "تعديل إعداد",
+  "person.create": "إضافة شخص",
+  "person.update": "تعديل بيانات شخص",
+  "person.delete": "حذف سجل شخص",
+  "person.restore": "استعادة سجل شخص",
+  "person.merge": "دمج سجلين",
+  "person.mark_distinct": "تأكيد عدم التكرار",
+  "person.import": "استيراد من Excel",
+  "person.export": "تصدير إلى Excel",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
