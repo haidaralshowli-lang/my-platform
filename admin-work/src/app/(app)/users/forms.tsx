@@ -104,11 +104,13 @@ export function AccountActions({ userId, isActive, isSelf }: { userId: string; i
       <FormMessage state={revokeState} />
       <FormMessage state={activeState} />
       <div className="flex flex-wrap gap-2">
-        <NoResetForm action={resetAction}>
-          <ConfirmButton variant="secondary" title="إعادة تعيين كلمة المرور" message="ستُصدر كلمة مرور مؤقتة جديدة وتُنهى جميع جلسات المستخدم.">
-            إعادة تعيين كلمة المرور
-          </ConfirmButton>
-        </NoResetForm>
+        {!isSelf && (
+          <NoResetForm action={resetAction}>
+            <ConfirmButton variant="secondary" title="إعادة تعيين كلمة المرور" message="ستُصدر كلمة مرور مؤقتة جديدة وتُنهى جميع جلسات المستخدم.">
+              إعادة تعيين كلمة المرور
+            </ConfirmButton>
+          </NoResetForm>
+        )}
         <NoResetForm action={revokeAction}>
           <ConfirmButton variant="secondary" title="إنهاء الجلسات" message="سيُطلب من المستخدم تسجيل الدخول مجدداً على جميع الأجهزة.">
             إنهاء جميع الجلسات

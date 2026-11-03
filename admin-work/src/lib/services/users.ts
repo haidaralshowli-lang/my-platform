@@ -121,6 +121,8 @@ export async function setUserActive(actor: Actor, userId: string, active: boolea
 
 export async function resetUserPassword(actor: Actor, userId: string, ctx?: AuditContext) {
   assertCan(actor, "users.manage");
+  // إعادة التعيين تُنهي كل جلسات صاحب الحساب، فلو نفّذها المدير على نفسه لخرج قبل أن يرى كلمة المرور المؤقتة
+  if (userId === actor.id) throw new AppError("لا يمكنك إعادة تعيين كلمة مرورك من هنا. استخدم «تغيير كلمة المرور» من أعلى الصفحة");
   const tempPassword = generateTempPassword();
   const passwordHash = await hashPassword(tempPassword);
   await prisma.$transaction(async (tx) => {

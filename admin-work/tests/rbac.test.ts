@@ -81,4 +81,10 @@ describe("الأدوار والصلاحيات", () => {
     const { actor } = await authenticate({ username: c.username, password: tempPassword });
     expect(actor.mustChangePassword).toBe(true);
   });
+
+  it("لا يعيد المدير تعيين كلمة مروره بنفسه من إدارة المستخدمين (كانت كلمته المؤقتة تضيع بإنهاء جلسته)", async () => {
+    const admin = await makeUser("ADMIN");
+    await expect(resetUserPassword(admin, admin.id)).rejects.toThrow(/تغيير كلمة المرور/);
+    await expect(authenticate({ username: admin.username, password: PASSWORD })).resolves.toBeDefined();
+  });
 });
